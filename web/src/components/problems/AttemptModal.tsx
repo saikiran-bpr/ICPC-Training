@@ -32,9 +32,9 @@ export function AttemptModal({
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormShape>({
     defaultValues: {
-      attempt_status: "TODO",
+      attempt_status: "",
       attempt_phase: "During Contest",
-      problem_faced: "No Problem Faced",
+      problem_faced: "",
       time_spent_min: "",
       notes: "",
     },
@@ -44,9 +44,9 @@ export function AttemptModal({
     if (!open || !problem) return
     const a = problem.my_attempt
     reset({
-      attempt_status: a?.attempt_status ?? "TODO",
+      attempt_status: a?.attempt_status ?? "",
       attempt_phase: a?.attempt_phase ?? "During Contest",
-      problem_faced: a?.problem_faced ?? "No Problem Faced",
+      problem_faced: a?.problem_faced ?? "",
       time_spent_min: a?.time_spent_min != null ? String(a.time_spent_min) : "",
       notes: a?.notes ?? "",
     })
@@ -66,7 +66,8 @@ export function AttemptModal({
     setSaving(true)
     try {
       const payload: AttemptInput = {
-        attempt_status: values.attempt_status,
+        // Blank status = "(no change)" — omit so the stored value is preserved.
+        attempt_status: values.attempt_status || undefined,
         attempt_phase: isAccepted ? values.attempt_phase : null,
         problem_faced: values.problem_faced || null,
         time_spent_min: values.time_spent_min ? Number(values.time_spent_min) : null,
@@ -119,6 +120,7 @@ export function AttemptModal({
         <div>
           <label className="form-label">Attempt Status</label>
           <select className="form-control" {...register("attempt_status")}>
+            <option value="">(no change)</option>
             {meta.data?.attempt_statuses.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -129,6 +131,7 @@ export function AttemptModal({
         <div>
           <label className="form-label">Problem Faced</label>
           <select className="form-control" {...register("problem_faced")}>
+            <option value="">(none)</option>
             {meta.data?.problem_faced.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -138,7 +141,10 @@ export function AttemptModal({
         </div>
         {isAccepted && (
           <div>
-            <label className="form-label">When did you solve this?</label>
+            <label className="form-label">
+              When did you solve this?{" "}
+              <span className="text-[color:var(--c-red)]">*</span>
+            </label>
             <select className="form-control" {...register("attempt_phase")}>
               {meta.data?.attempt_phases.map((p) => (
                 <option key={p} value={p}>
@@ -146,11 +152,17 @@ export function AttemptModal({
                 </option>
               ))}
             </select>
-            <p className="form-hint">Required for Accepted.</p>
+            <p className="form-hint">
+              Required for Accepted. Tells your team which problems you solved
+              during the contest vs. while upsolving later.
+            </p>
           </div>
         )}
         <div>
-          <label className="form-label">Time Spent (minutes)</label>
+          <label className="form-label">
+            Time Spent (minutes){" "}
+            {isAccepted && <span className="text-[color:var(--c-red)]">*</span>}
+          </label>
           <input
             type="number"
             min={0}
@@ -165,7 +177,10 @@ export function AttemptModal({
           )}
         </div>
         <div>
-          <label className="form-label">Notes / Learning</label>
+          <label className="form-label">
+            Notes / Learning{" "}
+            {isAccepted && <span className="text-[color:var(--c-red)]">*</span>}
+          </label>
           <textarea
             className="form-control"
             placeholder="What you learned, key insight, blockers…"

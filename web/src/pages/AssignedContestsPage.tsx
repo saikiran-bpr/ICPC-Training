@@ -199,7 +199,7 @@ function ContestProblemRow({
   idx: number
   onAttempt: (p: Problem) => void
 }) {
-  const letter = p.problem_index || String.fromCharCode(65 + idx)
+  const letter = String.fromCharCode(65 + idx)
   const a = p.my_attempt
   return (
     <tr>

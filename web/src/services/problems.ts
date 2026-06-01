@@ -9,10 +9,7 @@ export type ProblemWrite = {
   name?: string
   url: string
   platform?: string
-  contest_name?: string | null
   contest_type?: string
-  contest_year?: number | null
-  problem_index?: string | null
   rating?: number | null
   difficulty?: string
   topic?: string
@@ -46,7 +43,6 @@ export type LookupResponse = {
   platform?: string
   contest_type?: string
   sub_topic?: string
-  problem_index?: string
 }
 
 export const problemsService = {

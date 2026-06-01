@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { Modal } from "@/components/common/Modal"
-import { MultiSelect, type MultiSelectOption } from "@/components/common/MultiSelect"
+import {
+  AsyncMultiSelect,
+  type AsyncMultiSelectItem,
+} from "@/components/common/AsyncMultiSelect"
 import { useFetch } from "@/hooks/useFetch"
 import { metaService } from "@/services/meta"
-import { assignmentService } from "@/services/assignment"
+import { searchContestants, searchAssignableTeams } from "@/services/assignmentSearch"
 import { problemsService, type ProblemWrite } from "@/services/problems"
 import { ApiError } from "@/lib/api"
 import type { Problem } from "@/types/problem"
@@ -23,9 +26,6 @@ type FormShape = {
   name: string
   platform: string
   contest_type: string
-  contest_name: string
-  contest_year: string
-  problem_index: string
   rating: string
   difficulty: string
   importance: string
@@ -42,9 +42,6 @@ function blank(initial?: Problem | null): FormShape {
     name: initial?.name ?? "",
     platform: initial?.platform ?? "",
     contest_type: initial?.contest_type ?? "",
-    contest_name: initial?.contest_name ?? "",
-    contest_year: initial?.contest_year != null ? String(initial.contest_year) : "",
-    problem_index: initial?.problem_index ?? "",
     rating: initial?.rating != null ? String(initial.rating) : "",
     difficulty: initial?.difficulty ?? "",
     importance: initial?.importance ?? "",
@@ -56,52 +53,38 @@ function blank(initial?: Problem | null): FormShape {
   }
 }
 
+function initialUsers(initial?: Problem | null): AsyncMultiSelectItem[] {
+  return (
+    initial?.assigned_users.map((u) => ({ id: u.id, label: u.name, meta: u.role })) ?? []
+  )
+}
+
+function initialTeams(initial?: Problem | null): AsyncMultiSelectItem[] {
+  return initial?.assigned_teams.map((t) => ({ id: t.id, label: t.name })) ?? []
+}
+
 export function ProblemModal({ open, onClose, initial, onSaved }: Props) {
   const meta = useFetch((s) => metaService.get({ signal: s }), [])
-  const opts = useFetch((s) => assignmentService.get({ signal: s }), [])
 
-  const [userIds, setUserIds] = useState<number[]>(
-    initial?.assigned_users.map((u) => u.id) ?? [],
+  const [selUsers, setSelUsers] = useState<AsyncMultiSelectItem[]>(() =>
+    initialUsers(initial),
   )
-  const [teamIds, setTeamIds] = useState<number[]>(
-    initial?.assigned_teams.map((t) => t.id) ?? [],
+  const [selTeams, setSelTeams] = useState<AsyncMultiSelectItem[]>(() =>
+    initialTeams(initial),
   )
   const [lookingUp, setLookingUp] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const { register, control, handleSubmit, reset, setValue, watch, formState } =
+  const { register, handleSubmit, reset, setValue, watch, formState } =
     useForm<FormShape>({ defaultValues: blank(initial) })
 
   // Reset whenever the modal opens with a different problem.
   useEffect(() => {
     if (!open) return
     reset(blank(initial))
-    setUserIds(initial?.assigned_users.map((u) => u.id) ?? [])
-    setTeamIds(initial?.assigned_teams.map((t) => t.id) ?? [])
+    setSelUsers(initialUsers(initial))
+    setSelTeams(initialTeams(initial))
   }, [open, initial, reset])
-
-  const userOptions: MultiSelectOption<unknown>[] = useMemo(
-    () =>
-      opts.data?.users.map((u) => ({
-        id: u.id,
-        label: u.name,
-        meta: u.role,
-        searchHay: `${u.name} ${u.email} ${u.role}`,
-        raw: u,
-      })) ?? [],
-    [opts.data],
-  )
-  const teamOptions: MultiSelectOption<unknown>[] = useMemo(
-    () =>
-      opts.data?.teams.map((t) => ({
-        id: t.id,
-        label: t.name,
-        meta: t.institution ?? "",
-        searchHay: `${t.name} ${t.institution ?? ""}`,
-        raw: t,
-      })) ?? [],
-    [opts.data],
-  )
 
   async function doLookup() {
     const u = watch("url").trim()
@@ -122,7 +105,6 @@ export function ProblemModal({ open, onClose, initial, onSaved }: Props) {
       if (r.platform) setIfPresent("platform", r.platform)
       if (r.contest_type) setIfPresent("contest_type", r.contest_type)
       if (r.sub_topic) setIfPresent("sub_topic", r.sub_topic)
-      if (r.problem_index) setIfPresent("problem_index", r.problem_index)
       if (r.tags?.length) setIfPresent("tags", r.tags.join(", "))
       toast.success("Fetched metadata")
     } catch (e) {
@@ -140,9 +122,6 @@ export function ProblemModal({ open, onClose, initial, onSaved }: Props) {
         name: values.name.trim() || undefined,
         platform: values.platform || undefined,
         contest_type: values.contest_type || undefined,
-        contest_name: values.contest_name.trim() || null,
-        contest_year: values.contest_year ? Number(values.contest_year) : null,
-        problem_index: values.problem_index.trim() || null,
         rating: values.rating ? Number(values.rating) : null,
         difficulty: values.difficulty || undefined,
         importance: values.importance || undefined,
@@ -154,8 +133,8 @@ export function ProblemModal({ open, onClose, initial, onSaved }: Props) {
           .filter(Boolean),
         key_idea: values.key_idea.trim() || null,
         notes: values.notes.trim() || null,
-        assigned_user_ids: userIds,
-        assigned_team_ids: teamIds,
+        assigned_user_ids: selUsers.map((u) => u.id),
+        assigned_team_ids: selTeams.map((t) => t.id),
       }
       const saved = initial
         ? await problemsService.update(initial.id, payload)
@@ -235,26 +214,6 @@ export function ProblemModal({ open, onClose, initial, onSaved }: Props) {
             {...register("contest_type")}
           />
           <div>
-            <label className="form-label">Contest Name</label>
-            <input className="form-control" {...register("contest_name")} />
-          </div>
-          <div>
-            <label className="form-label">Contest Year</label>
-            <input
-              type="number"
-              className="form-control"
-              {...register("contest_year")}
-            />
-          </div>
-          <div>
-            <label className="form-label">Problem Index</label>
-            <input
-              className="form-control"
-              placeholder="A, B, F..."
-              {...register("problem_index")}
-            />
-          </div>
-          <div>
             <label className="form-label">Rating</label>
             <input
               type="number"
@@ -291,30 +250,30 @@ export function ProblemModal({ open, onClose, initial, onSaved }: Props) {
           </div>
 
           <div className="full">
-            <label className="form-label">Assign to users</label>
-            <Controller
-              control={control}
-              name="url"
-              render={() => (
-                <MultiSelect
-                  options={userOptions}
-                  selectedIds={userIds}
-                  onChange={setUserIds}
-                  placeholder="Search users by name or email…"
-                />
-              )}
+            <label className="form-label">Assign to contestants</label>
+            <AsyncMultiSelect
+              selected={selUsers}
+              onChange={setSelUsers}
+              search={searchContestants}
+              placeholder="Search contestants by name or handle…"
+              emptyMessage="No contestants found"
             />
+            <p className="form-hint">
+              Only contestants can be assigned problems.
+            </p>
           </div>
           <div className="full">
             <label className="form-label">Assign to teams</label>
-            <MultiSelect
-              options={teamOptions}
-              selectedIds={teamIds}
-              onChange={setTeamIds}
+            <AsyncMultiSelect
+              selected={selTeams}
+              onChange={setSelTeams}
+              search={searchAssignableTeams}
               placeholder="Search teams…"
+              emptyMessage="No teams found"
             />
             <p className="form-hint">
-              Assigning to a team makes the problem visible to all members.
+              Assigning to a team makes the problem visible to all members. You
+              can only assign to teams you coach.
             </p>
           </div>
           <div className="full">

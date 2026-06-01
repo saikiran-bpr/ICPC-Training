@@ -44,6 +44,7 @@ from app.schemas.team import (
     TeamCreate,
     TeamDeletedResponse,
     TeamOut,
+    TeamSearchResponse,
     TeamUpdate,
     UpdateMemberIn,
 )
@@ -73,6 +74,27 @@ async def list_teams(
 
     # One members query + one coaches query for ALL visible teams (skill: N+1).
     return await teams_repo.hydrate_many(conn, visible)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/teams/search — paginated picker used by the assignment widgets.
+# Coach+Admin only.  Coaches see only teams they coach; Admins see all.
+# Registered BEFORE /{tid} so "search" matches as a literal, not a tid.
+# ---------------------------------------------------------------------------
+
+@router.get("/search", response_model=TeamSearchResponse)
+async def search_teams(
+    me: RequireCoachOrAdmin,
+    conn: ConnDep,
+    q: Annotated[str | None, Query(max_length=120)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict:
+    coach_id = None if is_admin(me) else me["id"]
+    total, rows = await teams_repo.search_teams(
+        conn, q=q, coach_id=coach_id, limit=limit, offset=offset
+    )
+    return {"total": total, "results": rows}
 
 
 # ---------------------------------------------------------------------------

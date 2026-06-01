@@ -31,10 +31,10 @@ export type TeamMemberAttempt = {
 }
 
 export type TeamSummary = {
-  team_id: number
+  team_id: number | null
   team_name: string
-  primary_solved: number
-  primary_total: number
+  solved: number
+  total: number
   reserve_solved: number
   reserve_total: number
   members: TeamMemberAttempt[]
@@ -45,10 +45,7 @@ export type Problem = {
   name: string
   url: string
   platform: string | null
-  contest_name: string | null
   contest_type: string | null
-  contest_year: number | null
-  problem_index: string | null
   rating: number | null
   difficulty: string | null
   topic: string | null
@@ -71,6 +68,9 @@ export type Problem = {
   assigned_teams: AssignedTeam[]
   my_attempt: Attempt
   team_summary: TeamSummary[]
+  /** Contestant view: who assigned this to the viewer, and how. */
+  assigned_by: AssignedUser | null
+  assigned_via: string | null
 }
 
 export type ProblemListResponse = {
@@ -88,7 +88,6 @@ export type ProblemFilters = {
   status?: string
   suggested_role?: string
   contest_type?: string
-  contest_year?: number
   rating_min?: number
   rating_max?: number
   sort?: string

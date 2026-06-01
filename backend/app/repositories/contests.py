@@ -496,28 +496,32 @@ async def assign_bank_problem(
     problem_id: int,
     user_ids: list[int],
     team_ids: list[int],
+    assigned_by: int | None = None,
 ) -> None:
     """Add (or downgrade existing contest-derived) per-problem assignments.
 
     Skill: data-upsert.  ON CONFLICT DO UPDATE makes manual assignments
-    always win (via_contest = 0) — matches legacy semantics."""
+    always win (via_contest = 0) — matches legacy semantics.  The assigner is
+    refreshed too, so a re-assignment reflects who last assigned it."""
     if user_ids:
         await conn.cursor().executemany(
             """
-            INSERT INTO problem_users (problem_id, user_id, via_contest)
-            VALUES (%s, %s, 0)
-            ON CONFLICT (problem_id, user_id) DO UPDATE SET via_contest = 0
+            INSERT INTO problem_users (problem_id, user_id, via_contest, assigned_by)
+            VALUES (%s, %s, 0, %s)
+            ON CONFLICT (problem_id, user_id)
+                DO UPDATE SET via_contest = 0, assigned_by = EXCLUDED.assigned_by
             """,
-            [(problem_id, uid) for uid in user_ids],
+            [(problem_id, uid, assigned_by) for uid in user_ids],
         )
     if team_ids:
         await conn.cursor().executemany(
             """
-            INSERT INTO problem_teams (problem_id, team_id, via_contest)
-            VALUES (%s, %s, 0)
-            ON CONFLICT (problem_id, team_id) DO UPDATE SET via_contest = 0
+            INSERT INTO problem_teams (problem_id, team_id, via_contest, assigned_by)
+            VALUES (%s, %s, 0, %s)
+            ON CONFLICT (problem_id, team_id)
+                DO UPDATE SET via_contest = 0, assigned_by = EXCLUDED.assigned_by
             """,
-            [(problem_id, tid) for tid in team_ids],
+            [(problem_id, tid, assigned_by) for tid in team_ids],
         )
 
 
@@ -527,6 +531,7 @@ async def assign_contest_problems(
     problem_ids: list[int],
     user_ids: list[int],
     team_ids: list[int],
+    assigned_by: int | None = None,
 ) -> int:
     """Bulk-assign every problem in `problem_ids` to the given users/teams
     with via_contest = 1.  ON CONFLICT DO NOTHING preserves any pre-existing
@@ -536,21 +541,21 @@ async def assign_contest_problems(
     Skill: data-batch-inserts."""
 
     if user_ids:
-        pairs = [(pid, uid) for pid in problem_ids for uid in user_ids]
+        pairs = [(pid, uid, assigned_by) for pid in problem_ids for uid in user_ids]
         await conn.cursor().executemany(
             """
-            INSERT INTO problem_users (problem_id, user_id, via_contest)
-            VALUES (%s, %s, 1)
+            INSERT INTO problem_users (problem_id, user_id, via_contest, assigned_by)
+            VALUES (%s, %s, 1, %s)
             ON CONFLICT DO NOTHING
             """,
             pairs,
         )
     if team_ids:
-        pairs = [(pid, tid) for pid in problem_ids for tid in team_ids]
+        pairs = [(pid, tid, assigned_by) for pid in problem_ids for tid in team_ids]
         await conn.cursor().executemany(
             """
-            INSERT INTO problem_teams (problem_id, team_id, via_contest)
-            VALUES (%s, %s, 1)
+            INSERT INTO problem_teams (problem_id, team_id, via_contest, assigned_by)
+            VALUES (%s, %s, 1, %s)
             ON CONFLICT DO NOTHING
             """,
             pairs,

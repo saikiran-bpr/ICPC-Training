@@ -62,6 +62,25 @@ class TeamOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Lightweight picker / search response (no member/coach hydration)
+# ---------------------------------------------------------------------------
+
+class TeamPickerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    institution: str | None = None
+
+
+class TeamSearchResponse(BaseModel):
+    """Paginated response shape for GET /api/teams/search."""
+
+    total: int
+    results: list[TeamPickerOut]
+
+
+# ---------------------------------------------------------------------------
 # Write bodies
 # ---------------------------------------------------------------------------
 

@@ -7,12 +7,37 @@ export type TeamWrite = {
   description?: string | null
 }
 
+/** Lightweight team shape returned by the paginated search/picker endpoint. */
+export type TeamPicker = {
+  id: number
+  name: string
+  institution: string | null
+}
+
+export type TeamSearchResponse = {
+  total: number
+  results: TeamPicker[]
+}
+
 export const teamsService = {
   list: (
     params?: { mine?: "1" },
     opts?: { signal?: AbortSignal },
   ) =>
     api.get<Team[]>("/teams", {
+      params: params as Record<string, string | number | undefined>,
+      signal: opts?.signal,
+    }),
+
+  /**
+   * Paginated, server-side team search for assignment pickers.  The server
+   * scopes results to teams the caller coaches (Admins see all).
+   */
+  search: (
+    params: { q?: string; limit?: number; offset?: number },
+    opts?: { signal?: AbortSignal },
+  ) =>
+    api.get<TeamSearchResponse>("/teams/search", {
       params: params as Record<string, string | number | undefined>,
       signal: opts?.signal,
     }),

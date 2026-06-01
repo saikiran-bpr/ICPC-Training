@@ -18,10 +18,13 @@ const DEFAULT_FILTERS: ProblemFilters = {
   order: "desc",
 }
 
+const PAGE_SIZE = 100
+
 export function ProblemBankPage() {
   const { user, role } = useAuth()
   const [filters, setFilters] = useState<ProblemFilters>(DEFAULT_FILTERS)
   const [searchInput, setSearchInput] = useState("")
+  const [page, setPage] = useState(0)
   const [reloadTick, setReloadTick] = useState(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Problem | null>(null)
@@ -29,8 +32,13 @@ export function ProblemBankPage() {
 
   const meta = useFetch((signal) => metaService.get({ signal }), [])
   const effective = useMemo<ProblemFilters>(
-    () => ({ ...filters, q: filters.q || undefined }),
-    [filters],
+    () => ({
+      ...filters,
+      q: filters.q || undefined,
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE,
+    }),
+    [filters, page],
   )
 
   const list = useFetch(
@@ -44,6 +52,7 @@ export function ProblemBankPage() {
     k: K,
     v: ProblemFilters[K] | "",
   ) {
+    setPage(0)
     setFilters((f) => {
       const next = { ...f }
       if (v === "" || v == null) delete next[k]
@@ -53,6 +62,7 @@ export function ProblemBankPage() {
   }
 
   function applySearch() {
+    setPage(0)
     setFilters((f) => ({ ...f, q: searchInput.trim() || undefined }))
   }
 
@@ -154,6 +164,7 @@ export function ProblemBankPage() {
           type="button"
           className="btn"
           onClick={() => {
+            setPage(0)
             setFilters(DEFAULT_FILTERS)
             setSearchInput("")
           }}
@@ -221,6 +232,34 @@ export function ProblemBankPage() {
         </table>
       </div>
 
+      {!list.isLoading && (list.data?.total ?? 0) > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-[12px] text-[color:var(--c-muted)]">
+          <span>
+            Showing {page * PAGE_SIZE + 1}–
+            {Math.min((page + 1) * PAGE_SIZE, list.data?.total ?? 0)} of{" "}
+            {list.data?.total ?? 0}
+          </span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              ‹ Prev
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={(page + 1) * PAGE_SIZE >= (list.data?.total ?? 0)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next ›
+            </button>
+          </div>
+        </div>
+      )}
+
       <ProblemModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -261,16 +300,10 @@ function BankRow({
         >
           {p.name}
         </a>
-        {p.problem_index && <span className="ml-2"><Tag>{p.problem_index}</Tag></span>}
       </td>
       <td>
         <div className="flex flex-col text-[12px]">
           <span>{p.platform ?? "—"}</span>
-          {p.contest_name && (
-            <span className="text-[color:var(--c-muted)] truncate max-w-[240px]">
-              {p.contest_name}
-            </span>
-          )}
         </div>
       </td>
       <td>{p.rating ?? "—"}</td>

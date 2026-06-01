@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Modal } from "@/components/common/Modal"
-import { MultiSelect, type MultiSelectOption } from "@/components/common/MultiSelect"
-import { useFetch } from "@/hooks/useFetch"
-import { assignmentService } from "@/services/assignment"
+import {
+  AsyncMultiSelect,
+  type AsyncMultiSelectItem,
+} from "@/components/common/AsyncMultiSelect"
+import { searchContestants, searchAssignableTeams } from "@/services/assignmentSearch"
 import { bankService } from "@/services/bank"
 import { contestsService } from "@/services/contests"
 import { ApiError } from "@/lib/api"
@@ -23,53 +25,27 @@ export function AssignModal({
   target: AssignTarget | null
   onAssigned?: () => void
 }) {
-  const opts = useFetch((s) => assignmentService.get({ signal: s }), [])
-
-  const [userIds, setUserIds] = useState<number[]>([])
-  const [teamIds, setTeamIds] = useState<number[]>([])
+  const [selUsers, setSelUsers] = useState<AsyncMultiSelectItem[]>([])
+  const [selTeams, setSelTeams] = useState<AsyncMultiSelectItem[]>([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (open) {
-      setUserIds([])
-      setTeamIds([])
-    }
+    if (!open) return
+    setSelUsers([])
+    setSelTeams([])
   }, [open, target])
-
-  const userOptions: MultiSelectOption<unknown>[] = useMemo(
-    () =>
-      opts.data?.users.map((u) => ({
-        id: u.id,
-        label: u.name,
-        meta: u.role,
-        searchHay: `${u.name} ${u.email} ${u.role}`,
-        raw: u,
-      })) ?? [],
-    [opts.data],
-  )
-  const teamOptions: MultiSelectOption<unknown>[] = useMemo(
-    () =>
-      opts.data?.teams.map((t) => ({
-        id: t.id,
-        label: t.name,
-        meta: t.institution ?? "",
-        searchHay: `${t.name} ${t.institution ?? ""}`,
-        raw: t,
-      })) ?? [],
-    [opts.data],
-  )
 
   async function onSubmit() {
     if (!target) return
-    if (userIds.length === 0 && teamIds.length === 0) {
-      toast.error("Pick at least one user or team")
+    if (selUsers.length === 0 && selTeams.length === 0) {
+      toast.error("Pick at least one contestant or team")
       return
     }
     setSaving(true)
     try {
       const payload = {
-        assigned_user_ids: userIds.length ? userIds : undefined,
-        assigned_team_ids: teamIds.length ? teamIds : undefined,
+        assigned_user_ids: selUsers.length ? selUsers.map((u) => u.id) : undefined,
+        assigned_team_ids: selTeams.length ? selTeams.map((t) => t.id) : undefined,
       }
       if (target.kind === "problem") {
         await bankService.assignProblem(target.id, payload)
@@ -115,21 +91,23 @@ export function AssignModal({
       )}
       <div className="space-y-3">
         <div>
-          <label className="form-label">Assign to users</label>
-          <MultiSelect
-            options={userOptions}
-            selectedIds={userIds}
-            onChange={setUserIds}
-            placeholder="Search users…"
+          <label className="form-label">Assign to contestants</label>
+          <AsyncMultiSelect
+            selected={selUsers}
+            onChange={setSelUsers}
+            search={searchContestants}
+            placeholder="Search contestants by name or handle…"
+            emptyMessage="No contestants found"
           />
         </div>
         <div>
           <label className="form-label">Assign to teams</label>
-          <MultiSelect
-            options={teamOptions}
-            selectedIds={teamIds}
-            onChange={setTeamIds}
+          <AsyncMultiSelect
+            selected={selTeams}
+            onChange={setSelTeams}
+            search={searchAssignableTeams}
             placeholder="Search teams…"
+            emptyMessage="No teams found"
           />
         </div>
         <p className="form-hint">

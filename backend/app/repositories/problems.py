@@ -91,11 +91,31 @@ _CONTESTANT_VISIBILITY_SQL = (
     "))"
 )
 
+# A coach sees a problem when it's assigned (via_contest = 0) to a team they
+# coach OR when they assigned it directly to an individual contestant
+# (problem_users.assigned_by = them).  The latter is why a direct assignment to
+# a contestant must still surface on the coach's Assigned Problems page.
 _COACH_VISIBILITY_SQL = (
+    "("
     "id IN ("
     "  SELECT pt.problem_id FROM problem_teams pt "
     "  JOIN team_coaches tc ON tc.team_id = pt.team_id "
     "  WHERE tc.user_id = %s AND pt.via_contest = 0"
+    ")"
+    " OR id IN ("
+    "  SELECT problem_id FROM problem_users "
+    "  WHERE assigned_by = %s AND via_contest = 0"
+    ")"
+    ")"
+)
+
+# An Admin sees only problems THEY assigned (to a contestant directly, or to a
+# team) — not assignments made by coaches.  Mirrors the coach's "assigned_by"
+# clause, applied to both junctions.
+_ADMIN_VISIBILITY_SQL = (
+    "("
+    "id IN (SELECT problem_id FROM problem_users WHERE assigned_by = %s AND via_contest = 0)"
+    " OR id IN (SELECT problem_id FROM problem_teams WHERE assigned_by = %s AND via_contest = 0)"
     ")"
 )
 
@@ -118,8 +138,10 @@ async def list_assigned(
         params.extend([viewer["id"], viewer["id"]])
     elif viewer["role"] == "Coach":
         where.append(_COACH_VISIBILITY_SQL)
-        params.append(viewer["id"])
-    # Admin: no extra filter
+        params.extend([viewer["id"], viewer["id"]])
+    else:  # Admin: only problems they themselves assigned
+        where.append(_ADMIN_VISIBILITY_SQL)
+        params.extend([viewer["id"], viewer["id"]])
 
     where_clause = " WHERE " + " AND ".join(where)
     order_by = _order_by(filters.sort, filters.order)
@@ -183,7 +205,6 @@ def _build_where_filters(filters: ProblemFilters) -> tuple[list[str], list[Any]]
     eq("status", filters.status)
     eq("suggested_role", filters.suggested_role)
     eq("contest_type", filters.contest_type)
-    eq("contest_year", filters.contest_year)
 
     if filters.rating_min is not None:
         where.append("rating >= %s")
@@ -321,6 +342,11 @@ async def hydrate_many(
             conn, pids, teams_by_problem, users_by_problem
         )
 
+    # --- Batch query 5 (Contestant): who assigned each problem to me -------
+    assigned_by_map: dict[int, dict[str, Any]] = {}
+    if viewer["role"] == "Contestant":
+        assigned_by_map = await _assigner_for_viewer(conn, pids, viewer["id"])
+
     # --- Glue ---------------------------------------------------------------
     out: list[dict[str, Any]] = []
     for row in rows:
@@ -329,7 +355,71 @@ async def hydrate_many(
         d["assigned_teams"] = teams_by_problem.get(d["id"], [])
         d["my_attempt"] = my_attempt_by_problem.get(d["id"])
         d["team_summary"] = team_summaries.get(d["id"], [])
+        info = assigned_by_map.get(d["id"])
+        d["assigned_by"] = info["assigned_by"] if info else None
+        d["assigned_via"] = info["assigned_via"] if info else None
         out.append(d)
+    return out
+
+
+async def _assigner_for_viewer(
+    conn: AsyncConnection, pids: list[int], user_id: int
+) -> dict[int, dict[str, Any]]:
+    """For a contestant, resolve who assigned each problem to them and how.
+
+    A problem may be assigned directly (problem_users) and/or via a team
+    (problem_teams).  Direct assignment wins for the "Assigned by" label; the
+    `assigned_via` field is "Direct" or the team name.  Two batched queries +
+    one name lookup, regardless of page size.
+    """
+    if not pids:
+        return {}
+
+    direct = await fetch_all(
+        conn,
+        """
+        SELECT problem_id, assigned_by
+        FROM problem_users
+        WHERE user_id = %s AND problem_id = ANY(%s) AND via_contest = 0
+        """,
+        (user_id, pids),
+    )
+    via_team = await fetch_all(
+        conn,
+        """
+        SELECT pt.problem_id, pt.assigned_by, t.name AS team_name
+        FROM problem_teams pt
+        JOIN teams t ON t.id = pt.team_id
+        JOIN team_members tm ON tm.team_id = pt.team_id
+        WHERE tm.user_id = %s AND pt.problem_id = ANY(%s) AND pt.via_contest = 0
+        ORDER BY pt.problem_id, t.name
+        """,
+        (user_id, pids),
+    )
+
+    # Resolve assigner names in one lookup.
+    assigner_ids = {r["assigned_by"] for r in (*direct, *via_team) if r["assigned_by"]}
+    names: dict[int, dict[str, Any]] = {}
+    if assigner_ids:
+        urows = await fetch_all(
+            conn,
+            "SELECT id, name, role FROM users WHERE id = ANY(%s)",
+            (list(assigner_ids),),
+        )
+        names = {r["id"]: {"id": r["id"], "name": r["name"], "role": r["role"]} for r in urows}
+
+    out: dict[int, dict[str, Any]] = {}
+    # Team assignments first so a direct assignment overrides them below.
+    for r in via_team:
+        out.setdefault(
+            r["problem_id"],
+            {"assigned_by": names.get(r["assigned_by"]), "assigned_via": r["team_name"]},
+        )
+    for r in direct:
+        out[r["problem_id"]] = {
+            "assigned_by": names.get(r["assigned_by"]),
+            "assigned_via": "Direct",
+        }
     return out
 
 
@@ -387,6 +477,7 @@ async def _build_team_summaries_many(
                 "name": m["name"],
                 "role_in_team": m["role_in_team"],
                 "attempt_status": m["attempt_status"],
+                "attempt_phase": m["attempt_phase"],
                 "problem_faced": m["problem_faced"],
                 "time_spent_min": m["time_spent_min"],
                 "notes": m["notes"],
@@ -489,6 +580,7 @@ async def _direct_user_attempts_many(
                 "name": user["name"],
                 "role_in_team": None,  # not in a team
                 "attempt_status": a["attempt_status"] if a else None,
+                "attempt_phase": a["attempt_phase"] if a else None,
                 "problem_faced": a["problem_faced"] if a else None,
                 "time_spent_min": a["time_spent_min"] if a else None,
                 "notes": a["notes"] if a else None,
@@ -505,8 +597,8 @@ async def _direct_user_attempts_many(
 # Whitelist of columns the create/update routes may set directly.
 EDITABLE_COLUMNS = frozenset(
     {
-        "name", "url", "platform", "contest_name", "contest_type", "contest_year",
-        "problem_index", "rating", "difficulty", "topic", "sub_topic", "tags",
+        "name", "url", "platform", "contest_type",
+        "rating", "difficulty", "topic", "sub_topic", "tags",
         "importance", "suggested_role", "prerequisites", "key_idea",
         "editorial_url", "time_limit_ms", "memory_limit_mb",
         "status", "assigned_to", "notes",
@@ -522,7 +614,7 @@ def normalise_payload(payload: dict[str, Any]) -> dict[str, Any]:
             clean[k] = payload[k]
     if "tags" in clean:
         clean["tags"] = _tags_to_db(clean["tags"])
-    for k in ("rating", "contest_year", "time_limit_ms", "memory_limit_mb"):
+    for k in ("rating", "time_limit_ms", "memory_limit_mb"):
         if k in clean:
             v = clean[k]
             if v in (None, ""):
@@ -628,29 +720,35 @@ async def bulk_insert(
 # ---------------------------------------------------------------------------
 
 async def replace_problem_teams(
-    conn: AsyncConnection, problem_id: int, team_ids: list[int]
+    conn: AsyncConnection,
+    problem_id: int,
+    team_ids: list[int],
+    assigned_by: int | None = None,
 ) -> None:
-    """Wipe + reinsert the team set for a problem."""
+    """Wipe + reinsert the team set for a problem, recording the assigner."""
     await execute(conn, "DELETE FROM problem_teams WHERE problem_id = %s", (problem_id,))
     if team_ids:
         # Batch insert with ON CONFLICT DO NOTHING in case of dupes within the
         # caller's list — UNIQUE(problem_id, team_id) prevents true duplicates.
         await conn.cursor().executemany(
-            "INSERT INTO problem_teams (problem_id, team_id) VALUES (%s, %s) "
-            "ON CONFLICT DO NOTHING",
-            [(problem_id, tid) for tid in team_ids],
+            "INSERT INTO problem_teams (problem_id, team_id, assigned_by) "
+            "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            [(problem_id, tid, assigned_by) for tid in team_ids],
         )
 
 
 async def replace_problem_users(
-    conn: AsyncConnection, problem_id: int, user_ids: list[int]
+    conn: AsyncConnection,
+    problem_id: int,
+    user_ids: list[int],
+    assigned_by: int | None = None,
 ) -> None:
     await execute(conn, "DELETE FROM problem_users WHERE problem_id = %s", (problem_id,))
     if user_ids:
         await conn.cursor().executemany(
-            "INSERT INTO problem_users (problem_id, user_id) VALUES (%s, %s) "
-            "ON CONFLICT DO NOTHING",
-            [(problem_id, uid) for uid in user_ids],
+            "INSERT INTO problem_users (problem_id, user_id, assigned_by) "
+            "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            [(problem_id, uid, assigned_by) for uid in user_ids],
         )
 
 
@@ -658,18 +756,31 @@ async def validate_assignment_targets(
     conn: AsyncConnection,
     user_ids: list[int] | None,
     team_ids: list[int] | None,
+    me: dict[str, Any] | None = None,
 ) -> None:
-    """Raises ValueError if any id doesn't exist.  Router converts to 400."""
+    """Validate assignment targets.  Raises ValueError (router → 400) when:
+
+      • a user/team id doesn't exist;
+      • an assigned user is NOT a Contestant — only Contestants solve problems,
+        so coaches/admins can't be assigned;
+      • the actor is a Coach assigning to a team they don't coach — coaches may
+        only assign to their own teams (Admins are unrestricted).
+    """
     if user_ids:
         rows = await fetch_all(
             conn,
-            "SELECT id FROM users WHERE id = ANY(%s)",
+            "SELECT id, role FROM users WHERE id = ANY(%s)",
             (user_ids,),
         )
         found = {r["id"] for r in rows}
         missing = [u for u in user_ids if u not in found]
         if missing:
             raise ValueError(f"assigned_user_ids contains invalid user id(s): {missing}")
+        non_contestants = sorted(r["id"] for r in rows if r["role"] != "Contestant")
+        if non_contestants:
+            raise ValueError(
+                f"assigned_user_ids must be Contestants — not allowed: {non_contestants}"
+            )
     if team_ids:
         rows = await fetch_all(
             conn,
@@ -680,6 +791,19 @@ async def validate_assignment_targets(
         missing = [t for t in team_ids if t not in found]
         if missing:
             raise ValueError(f"assigned_team_ids contains invalid team id(s): {missing}")
+        # Coaches may only assign to teams they coach; Admins are unrestricted.
+        if me is not None and me.get("role") == "Coach":
+            crows = await fetch_all(
+                conn,
+                "SELECT team_id FROM team_coaches WHERE user_id = %s AND team_id = ANY(%s)",
+                (me["id"], team_ids),
+            )
+            coached = {r["team_id"] for r in crows}
+            not_coached = sorted(t for t in team_ids if t not in coached)
+            if not_coached:
+                raise ValueError(
+                    f"You can only assign to teams you coach — not allowed: {not_coached}"
+                )
 
 
 # ---------------------------------------------------------------------------

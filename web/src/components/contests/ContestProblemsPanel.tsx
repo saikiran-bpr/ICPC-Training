@@ -92,7 +92,7 @@ export function ContestProblemsPanel({
                 <tr key={p.id}>
                   <td>
                     <Tag>
-                      {p.problem_index || String.fromCharCode(65 + idx)}
+                      {String.fromCharCode(65 + idx)}
                     </Tag>
                   </td>
                   <td>

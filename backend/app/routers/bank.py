@@ -76,7 +76,7 @@ async def assign_from_bank(
         )
     try:
         await problems_repo.validate_assignment_targets(
-            conn, payload.assigned_user_ids, payload.assigned_team_ids
+            conn, payload.assigned_user_ids, payload.assigned_team_ids, me
         )
     except ValueError as e:
         raise bad_request(str(e)) from e
@@ -86,6 +86,7 @@ async def assign_from_bank(
         problem_id,
         payload.assigned_user_ids,
         payload.assigned_team_ids,
+        me["id"],
     )
 
     row = await problems_repo.get_by_id(conn, problem_id)
@@ -237,7 +238,7 @@ async def remove_problem_from_contest(
     response_model=AssignContestResult,
 )
 async def assign_contest(
-    _: RequireCoachOrAdmin,
+    me: RequireCoachOrAdmin,
     conn: ConnDep,
     cid: Annotated[int, Path(ge=1)],
     payload: AssignIn,
@@ -253,7 +254,7 @@ async def assign_contest(
         )
     try:
         await problems_repo.validate_assignment_targets(
-            conn, payload.assigned_user_ids, payload.assigned_team_ids
+            conn, payload.assigned_user_ids, payload.assigned_team_ids, me
         )
     except ValueError as e:
         raise bad_request(str(e)) from e
@@ -268,6 +269,7 @@ async def assign_contest(
         pids,
         payload.assigned_user_ids,
         payload.assigned_team_ids,
+        me["id"],
     )
 
     row = await contests_repo.get_by_id(conn, cid)

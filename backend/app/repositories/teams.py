@@ -46,6 +46,60 @@ async def get_user_team_ids(conn: AsyncConnection, user_id: int) -> set[int]:
     return {r["team_id"] for r in rows}
 
 
+async def search_teams(
+    conn: AsyncConnection,
+    *,
+    q: str | None,
+    coach_id: int | None,
+    limit: int,
+    offset: int,
+) -> tuple[int, list[dict[str, Any]]]:
+    """Paginated team search backing the assignment picker.
+
+    When `coach_id` is given (the viewer is a Coach), results are restricted to
+    teams that coach coaches via `team_coaches`.  Admins pass `coach_id=None`
+    to search every active team.  Mirrors `users_repo.search_users`.
+    """
+    where: list[str] = ["is_active = 1"]
+    params: list[Any] = []
+    if coach_id is not None:
+        where.append("id IN (SELECT team_id FROM team_coaches WHERE user_id = %s)")
+        params.append(coach_id)
+    if q:
+        like = f"%{q}%"
+        where.append("(name ILIKE %s OR institution ILIKE %s)")
+        params.extend([like, like])
+
+    where_sql = " AND ".join(where)
+    count_row = await fetch_one(
+        conn, f"SELECT COUNT(*) AS n FROM teams WHERE {where_sql}", params
+    )
+    total = int(count_row["n"]) if count_row else 0
+
+    rows = await fetch_all(
+        conn,
+        f"SELECT id, name, institution FROM teams WHERE {where_sql} "
+        f"ORDER BY name LIMIT %s OFFSET %s",
+        [*params, limit, offset],
+    )
+    return total, rows
+
+
+async def coached_team_ids(
+    conn: AsyncConnection, coach_id: int, team_ids: list[int]
+) -> set[int]:
+    """Of `team_ids`, return the subset the given coach coaches.  One query —
+    used to authorize assignment targets."""
+    if not team_ids:
+        return set()
+    rows = await fetch_all(
+        conn,
+        "SELECT team_id FROM team_coaches WHERE user_id = %s AND team_id = ANY(%s)",
+        (coach_id, team_ids),
+    )
+    return {r["team_id"] for r in rows}
+
+
 # ---------------------------------------------------------------------------
 # Hydration — N+1-free
 # ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, status
-from psycopg.errors import IntegrityError
+from psycopg.errors import IntegrityError, UniqueViolation
 
 from app.constants import ATTEMPT_PHASES
 from app.deps import ConnDep, CurrentUser, RequireCoachOrAdmin, can_manage_problem
@@ -33,6 +33,15 @@ from app.schemas.problem import (
 from app.services import lookup as lookup_service
 
 router = APIRouter(prefix="/problems", tags=["problems"])
+
+
+def _conflict_from_integrity(e: IntegrityError) -> Exception:
+    """Map a DB integrity error to a clean 409.  The common case is a duplicate
+    problem URL — `problems.url` is UNIQUE (constraint `problems_url_key`)."""
+    constraint = getattr(getattr(e, "diag", None), "constraint_name", "") or ""
+    if isinstance(e, UniqueViolation) and constraint == "problems_url_key":
+        return conflict("A problem with this URL already exists.")
+    return conflict(f"Integrity error: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +110,7 @@ async def create_problem(
     user_ids = body.pop("assigned_user_ids", None)
     team_ids = body.pop("assigned_team_ids", None)
     try:
-        await problems_repo.validate_assignment_targets(conn, user_ids, team_ids)
+        await problems_repo.validate_assignment_targets(conn, user_ids, team_ids, me)
     except ValueError as e:
         raise bad_request(str(e)) from e
 
@@ -109,11 +118,11 @@ async def create_problem(
     try:
         pid = await problems_repo.insert(conn, data, created_by=me["id"])
         if user_ids is not None:
-            await problems_repo.replace_problem_users(conn, pid, user_ids)
+            await problems_repo.replace_problem_users(conn, pid, user_ids, me["id"])
         if team_ids is not None:
-            await problems_repo.replace_problem_teams(conn, pid, team_ids)
+            await problems_repo.replace_problem_teams(conn, pid, team_ids, me["id"])
     except IntegrityError as e:
-        raise conflict(f"Integrity error: {e}") from e
+        raise _conflict_from_integrity(e) from e
 
     row = await problems_repo.get_by_id(conn, pid)
     assert row is not None
@@ -148,7 +157,7 @@ async def update_problem(
         raise bad_request("No editable fields supplied")
 
     try:
-        await problems_repo.validate_assignment_targets(conn, user_ids, team_ids)
+        await problems_repo.validate_assignment_targets(conn, user_ids, team_ids, me)
     except ValueError as e:
         raise bad_request(str(e)) from e
 
@@ -156,11 +165,11 @@ async def update_problem(
         if data:
             await problems_repo.update_fields(conn, problem_id, data)
         if user_ids is not None:
-            await problems_repo.replace_problem_users(conn, problem_id, user_ids)
+            await problems_repo.replace_problem_users(conn, problem_id, user_ids, me["id"])
         if team_ids is not None:
-            await problems_repo.replace_problem_teams(conn, problem_id, team_ids)
+            await problems_repo.replace_problem_teams(conn, problem_id, team_ids, me["id"])
     except IntegrityError as e:
-        raise conflict(f"Integrity error: {e}") from e
+        raise _conflict_from_integrity(e) from e
 
     row = await problems_repo.get_by_id(conn, problem_id)
     assert row is not None

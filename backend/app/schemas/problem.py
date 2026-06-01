@@ -72,6 +72,7 @@ class TeamSummaryMember(BaseModel):
     name: str
     role_in_team: str | None = None  # 'Member'/'Reserve', None for "direct user" rows
     attempt_status: str | None = None
+    attempt_phase: str | None = None
     problem_faced: str | None = None
     time_spent_min: int | None = None
     notes: str | None = None
@@ -102,10 +103,7 @@ class ProblemOut(BaseModel):
     url: str
 
     platform: str | None = None
-    contest_name: str | None = None
     contest_type: str | None = None
-    contest_year: int | None = None
-    problem_index: str | None = None
 
     rating: int | None = None
     difficulty: str | None = None
@@ -137,6 +135,11 @@ class ProblemOut(BaseModel):
     my_attempt: AttemptInline | None = None
     team_summary: list[TeamSummary] = Field(default_factory=list)
 
+    # Contestant view: who assigned this problem to the viewer, and how
+    # ("Direct" or a team name).  None for Coach/Admin viewers.
+    assigned_by: AssignedUserRef | None = None
+    assigned_via: str | None = None
+
 
 class ProblemListResponse(BaseModel):
     total: int
@@ -161,10 +164,7 @@ class ProblemWrite(BaseModel):
     name: str | None = None
     url: str | None = None
     platform: str | None = None
-    contest_name: str | None = None
     contest_type: str | None = None
-    contest_year: int | None = None
-    problem_index: str | None = None
     rating: int | None = None
     difficulty: str | None = None
     topic: str | None = None
@@ -217,7 +217,6 @@ class ProblemFilters(BaseModel):
     status: str | None = None
     suggested_role: str | None = None
     contest_type: str | None = None
-    contest_year: int | None = None
     rating_min: int | None = None
     rating_max: int | None = None
     sort: SortKey = "date_added"

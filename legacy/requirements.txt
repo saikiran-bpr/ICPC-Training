@@ -1,0 +1,10 @@
+Flask>=3.0.0
+Flask-Cors>=4.0.0
+openpyxl>=3.1.2
+
+# Postgres / Supabase driver — used when DATABASE_URL is set (production).
+# Local dev falls back to the stdlib `sqlite3` module and never imports this.
+psycopg[binary]>=3.1
+
+# Loads .env for `python app.py` so DATABASE_URL is picked up automatically.
+python-dotenv>=1.0

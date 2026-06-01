@@ -1,0 +1,50 @@
+{
+  "A": {
+    "first_line": "                          Problem A \u2013 Almost Aligned",
+    "raw_len": 772
+  },
+  "B": {
+    "first_line": "                       Problem B \u2013 Beating the Record",
+    "raw_len": 11143
+  },
+  "C": {
+    "first_line": "                        Problem C \u2013 Clever Cell Choices",
+    "raw_len": 3324
+  },
+  "D": {
+    "first_line": "                              Problem D \u2013 DiviDuelo",
+    "raw_len": 2390
+  },
+  "E": {
+    "first_line": "                        Problem E \u2013 Expanding STACKS!",
+    "raw_len": 2969
+  },
+  "F": {
+    "first_line": "                          Problem F \u2013 Fair Distribution",
+    "raw_len": 2037
+  },
+  "G": {
+    "first_line": "                             Problem G \u2013 Greek Casino",
+    "raw_len": 6052
+  },
+  "H": {
+    "first_line": "                      Problem H \u2013 Harmonic Operations",
+    "raw_len": 6192
+  },
+  "I": {
+    "first_line": "   Problem I \u2013 Insects, Mathematics, Accuracy, and Efficiency",
+    "raw_len": 4811
+  },
+  "J": {
+    "first_line": "                           Problem J \u2013 Joys of Trading",
+    "raw_len": 4212
+  },
+  "K": {
+    "first_line": "                                 Problem K \u2013 KMOP",
+    "raw_len": 5184
+  },
+  "L": {
+    "first_line": "                             Problem L \u2013 LED Matrix",
+    "raw_len": 546
+  }
+}

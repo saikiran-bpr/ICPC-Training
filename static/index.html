@@ -1,0 +1,2723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICPC Problem Repository</title>
+<style>
+:root {
+  --bg:        #0e1116;
+  --panel:     #161b22;
+  --panel-2:   #1c232c;
+  --border:    #2a323d;
+  --text:      #e6edf3;
+  --muted:     #8b96a3;
+  --accent:    #5ea1ff;
+  --accent-2:  #4087e5;
+  --green:     #3fb950;
+  --red:       #f85149;
+  --amber:     #d29922;
+  --critical:  #f85149;
+  --high:      #d29922;
+  --medium:    #5ea1ff;
+  --low:       #6e7681;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--text); font-size: 14px;
+}
+
+/* ---------------- Header / nav ---------------- */
+header.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+header.topbar h1 { font-size: 16px; margin: 0; font-weight: 600; }
+header.topbar .stats { color: var(--muted); font-size: 12px; }
+nav.tabs { display: flex; gap: 2px; }
+nav.tabs button {
+  background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 6px;
+  padding: 6px 12px; font-size: 13px; cursor: pointer;
+}
+nav.tabs button.active { background: var(--panel-2); color: var(--text); border-color: var(--border); }
+nav.tabs button:hover { color: var(--text); }
+.user-chip { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.user-chip strong { color: var(--text); font-weight: 600; }
+.role-badge { background: var(--panel-2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; font-size: 11px; color: var(--accent); }
+
+button, .btn {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  transition: background .12s, border-color .12s;
+}
+button:hover { background: #232b35; border-color: #3a4350; }
+button.primary { background: var(--accent-2); border-color: var(--accent-2); color: white; }
+button.primary:hover { background: var(--accent); border-color: var(--accent); }
+button.danger { background: transparent; border-color: var(--red); color: var(--red); }
+button.danger:hover { background: rgba(248,81,73,0.12); }
+button.ghost { background: transparent; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+.layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 49px); }
+aside {
+  background: var(--panel); border-right: 1px solid var(--border);
+  padding: 16px; overflow-y: auto;
+}
+aside h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 16px 0 6px; }
+aside h3:first-child { margin-top: 0; }
+aside .filter-group { display: flex; flex-direction: column; gap: 6px; }
+aside select, aside input {
+  width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  padding: 7px 9px; border-radius: 5px; font-size: 13px;
+}
+aside .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+main { padding: 16px 20px; overflow-x: auto; }
+.search-row { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+.search-row input { flex: 1; padding: 9px 12px; border-radius: 6px; background: var(--panel); border: 1px solid var(--border); color: var(--text); font-size: 14px; }
+table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+th { background: var(--panel-2); color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; user-select: none; }
+th:hover { color: var(--text); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(94,161,255,0.04); }
+td a { color: var(--accent); text-decoration: none; }
+td a:hover { text-decoration: underline; }
+.tag { display: inline-block; background: var(--panel-2); color: var(--muted); padding: 2px 7px; border-radius: 3px; font-size: 11px; margin: 1px 2px 1px 0; }
+.pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.pill-Critical    { background: rgba(248,81,73,.16);  color: var(--critical); }
+.pill-High        { background: rgba(210,153,34,.16); color: var(--high); }
+.pill-Medium      { background: rgba(94,161,255,.16); color: var(--medium); }
+.pill-Low         { background: rgba(110,118,129,.20); color: var(--low); }
+.pill-Todo        { background: rgba(110,118,129,.20); color: var(--muted); }
+.pill-InProgress  { background: rgba(210,153,34,.16); color: var(--high); }
+.pill-Done        { background: rgba(63,185,80,.16);  color: var(--green); }
+.pill-Upsolve     { background: rgba(94,161,255,.16); color: var(--medium); }
+.pill-Skipped     { background: rgba(110,118,129,.20); color: var(--low); }
+.pill-Admin       { background: rgba(248,81,73,.16);  color: var(--critical); }
+.pill-Coach       { background: rgba(210,153,34,.16); color: var(--high); }
+.pill-Contestant  { background: rgba(94,161,255,.16); color: var(--medium); }
+.pill-Member      { background: rgba(63,185,80,.16);  color: var(--green); }
+.pill-Reserve     { background: rgba(110,118,129,.20); color: var(--muted); }
+.empty { padding: 50px; text-align: center; color: var(--muted); }
+.empty h2 { color: var(--text); margin: 0 0 8px; }
+.row-actions { display: flex; gap: 6px; opacity: 0; transition: opacity .12s; }
+tr:hover .row-actions { opacity: 1; }
+.row-actions button { padding: 3px 8px; font-size: 11px; }
+
+/* Modal */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 100; }
+.modal-bg.show { display: flex; }
+.modal { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; width: min(820px, 92vw); max-height: 92vh; overflow-y: auto; }
+.modal.sm { width: min(460px, 92vw); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--panel); }
+.modal-header h2 { margin: 0; font-size: 16px; }
+.modal-body { padding: 16px 20px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; position: sticky; bottom: 0; background: var(--panel); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.form-grid .full { grid-column: 1 / -1; }
+.field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 4px; }
+.field input, .field select, .field textarea {
+  width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  padding: 8px 10px; border-radius: 5px; font-size: 13px; font-family: inherit;
+}
+.field textarea { resize: vertical; min-height: 60px; }
+.field .hint { color: var(--muted); font-size: 11px; margin-top: 3px; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.4); transform: translateY(120%); transition: transform .25s; z-index: 200; max-width: 380px; }
+.toast.show { transform: translateY(0); }
+.toast.error { border-color: var(--red); color: var(--red); }
+.toast.success { border-color: var(--green); color: var(--green); }
+
+/* ---------------- Auth screen ---------------- */
+.auth-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at top, #1a2230 0%, var(--bg) 60%);
+}
+.auth-card {
+  width: min(420px, 92vw);
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 28px 28px 22px;
+}
+.auth-card h1 { margin: 0 0 4px; font-size: 20px; }
+.auth-card p.lede { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+.auth-card .field { margin-bottom: 12px; }
+.auth-card button.primary { width: 100%; padding: 10px; font-size: 14px; margin-top: 6px; }
+.auth-toggle { text-align: center; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.auth-toggle a { color: var(--accent); cursor: pointer; }
+
+/* ---------------- Teams view ---------------- */
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+.team-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.team-card h3 { margin: 0 0 4px; font-size: 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.team-card .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+.team-card .roster { margin-top: 8px; }
+.team-card .roster h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .8px; }
+.team-card .person { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.team-card .person:last-child { border-bottom: 1px solid var(--border); }
+.team-card .person .name { display: flex; gap: 6px; align-items: center; }
+.team-card .person .x { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 0 4px; font-size: 14px; opacity: 0; transition: opacity .12s; }
+.team-card .person:hover .x { opacity: 1; }
+.team-card .person .x:hover { color: var(--red); }
+.team-card .add-row { display: flex; gap: 6px; margin-top: 8px; }
+.team-card .add-row select { flex: 1; }
+.team-card .footer { display: flex; gap: 6px; margin-top: 12px; }
+
+/* Contest dropdown — sliding expansion + breathing room */
+.contest-problems { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.28s ease-out, margin-top 0.28s ease-out; margin-top: 0; }
+.contest-problems > .inner { overflow: hidden; min-height: 0; }
+.contest-problems.open { grid-template-rows: 1fr; margin-top: 14px; }
+.contest-problems > .inner > * { padding-top: 12px; border-top: 1px solid var(--border); }
+.contest-problems table { background: var(--panel-2); border-radius: 6px; overflow: hidden; width: 100%; table-layout: fixed; }
+.contest-problems table th { padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 500; text-align: left; }
+.contest-problems table td { padding: 9px 12px; font-size: 13px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+.contest-problems table td a { color: var(--accent); text-decoration: none; }
+.contest-problems table td a:hover { text-decoration: underline; }
+.contest-problems table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.contest-problems .empty-state { color: var(--muted); padding: 14px 12px; font-size: 13px; }
+/* Contest expansion table — 8-column layout: index, name, platform, rating, topic, assigned, tutorial, actions */
+.contest-problems table th:nth-child(1), .contest-problems table td:nth-child(1) { width: 36px; text-align: center; color: var(--muted); font-weight: 500; }
+.contest-problems table th:nth-child(2), .contest-problems table td:nth-child(2) { width: auto; min-width: 180px; }
+.contest-problems table th:nth-child(3), .contest-problems table td:nth-child(3) { width: 90px; }
+.contest-problems table th:nth-child(4), .contest-problems table td:nth-child(4) { width: 60px; text-align: right; }
+.contest-problems table th:nth-child(5), .contest-problems table td:nth-child(5) { width: 120px; }
+.contest-problems table th:nth-child(6), .contest-problems table td:nth-child(6) { width: auto; min-width: 140px; }
+.contest-problems table th:nth-child(7), .contest-problems table td:nth-child(7) { width: 110px; text-align: center; }
+.contest-problems table th:nth-child(8), .contest-problems table td:nth-child(8) { width: 130px; text-align: right; overflow: visible; }
+.contest-problems table td:nth-child(8) > div { display: flex; gap: 4px; justify-content: flex-end; }
+
+/* When a contest card has its dropdown open, span full grid row so the 8-column table has breathing room */
+.team-card:has(.contest-problems.open) { grid-column: 1 / -1; }
+.team-card:has(.contest-problems.open) .meta { max-width: 800px; }
+.team-card:has(.contest-problems.open) > h3,
+.team-card:has(.contest-problems.open) > .meta,
+.team-card:has(.contest-problems.open) > .footer { max-width: 100%; }
+
+.cap-bar { display: flex; gap: 4px; margin-top: 4px; }
+.cap-bar span { display: inline-block; height: 6px; flex: 1; border-radius: 3px; background: var(--panel-2); }
+.cap-bar span.filled { background: var(--green); }
+.cap-bar.reserve span.filled { background: var(--amber); }
+
+/* ---------------- Searchable select ---------------- */
+.ss-wrap { position: relative; }
+.ss-input { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); padding: 8px 10px; border-radius: 5px; font-size: 13px; }
+.ss-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  max-height: 220px; overflow-y: auto; box-shadow: 0 6px 18px rgba(0,0,0,.4);
+  display: none;
+}
+.ss-dropdown.show { display: block; }
+.ss-dropdown .ss-section { padding: 4px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.ss-dropdown .ss-item { padding: 7px 10px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.ss-dropdown .ss-item:hover, .ss-dropdown .ss-item.active { background: var(--panel-2); }
+.ss-dropdown .ss-item .meta { color: var(--muted); font-size: 11px; }
+.ss-dropdown .ss-empty { padding: 10px; color: var(--muted); font-size: 12px; text-align: center; }
+.ss-dropdown .ss-clear { padding: 7px 10px; cursor: pointer; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.ss-dropdown .ss-clear:hover { color: var(--red); background: var(--panel-2); }
+
+/* ---------------- Multi-select (chips) ---------------- */
+.ms-wrap { position: relative; background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 36px; }
+.ms-chips { display: contents; }
+.ms-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--border); padding: 2px 4px 2px 8px; border-radius: 4px; font-size: 12px; }
+.ms-chip button { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 0 4px; font-size: 14px; }
+.ms-chip button:hover { color: var(--red); }
+.ms-input { flex: 1; min-width: 140px; background: transparent; border: 0; outline: 0; color: var(--text); font-size: 13px; padding: 4px; }
+.ms-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; max-height: 220px; overflow-y: auto; box-shadow: 0 6px 18px rgba(0,0,0,.4); display: none; }
+.ms-dropdown.show { display: block; }
+.ms-dropdown .ms-item { padding: 7px 10px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.ms-dropdown .ms-item:hover { background: var(--panel-2); }
+.ms-dropdown .ms-empty { padding: 10px; color: var(--muted); font-size: 12px; text-align: center; }
+
+/* ---------------- Users view ---------------- */
+.users-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.users-toolbar input, .users-toolbar select {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 10px; border-radius: 5px; font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<!-- =====================  AUTH (login / signup)  ===================== -->
+<div id="view-auth" class="auth-wrap" style="display:none">
+  <div class="auth-card">
+    <h1 id="auth-title">Sign in</h1>
+    <p class="lede" id="auth-lede">Welcome back to the ICPC training repository.</p>
+
+    <!-- Login -->
+    <div id="login-form">
+      <div class="field"><label>Email</label><input id="login-email" type="email" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input id="login-password" type="password" autocomplete="current-password"></div>
+      <button class="primary" id="login-submit">Sign in</button>
+      <div class="auth-toggle">No account? <a id="show-signup">Sign up as a contestant</a></div>
+    </div>
+
+    <!-- Signup -->
+    <div id="signup-form" style="display:none">
+      <div class="field"><label>Full name</label><input id="signup-name"></div>
+      <div class="field"><label>Email</label><input id="signup-email" type="email" autocomplete="email"></div>
+      <div class="field"><label>Password (min 8 chars)</label><input id="signup-password" type="password" autocomplete="new-password"></div>
+      <div class="field"><label>Codeforces handle (optional)</label><input id="signup-handle"></div>
+      <div class="field"><label>Institution (optional)</label><input id="signup-institution"></div>
+      <button class="primary" id="signup-submit">Create account</button>
+      <div class="auth-toggle">Already have an account? <a id="show-login">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================  APP shell  ===================== -->
+<div id="view-app" style="display:none">
+
+<header class="topbar">
+  <div style="display:flex;align-items:center;gap:18px">
+    <h1>ICPC Training</h1>
+    <nav class="tabs" id="tabs">
+      <button data-tab="problems" class="active">Assigned Problems</button>
+      <button data-tab="assigned-contests">Assigned Contests</button>
+      <button data-tab="teams">Teams</button>
+      <button data-tab="problem-bank" id="tab-problem-bank" style="display:none">Problem Bank</button>
+      <button data-tab="contest-bank" id="tab-contest-bank" style="display:none">Contest Bank</button>
+      <button data-tab="users" id="tab-users" style="display:none">Users</button>
+    </nav>
+  </div>
+  <div class="user-chip">
+    <span class="role-badge" id="me-role"></span>
+    <strong id="me-name"></strong>
+    <button class="ghost" id="btn-change-pw" title="Settings">⚙</button>
+    <button id="btn-logout">Logout</button>
+  </div>
+</header>
+
+<!-- ============== PROBLEMS view ============== -->
+<div id="tab-content-problems">
+<div class="layout">
+  <aside>
+    <h3>Filters</h3>
+    <div class="filter-group">
+      <select id="f-platform"><option value="">All platforms</option></select>
+      <select id="f-topic"><option value="">All topics</option></select>
+      <select id="f-difficulty"><option value="">All difficulties</option></select>
+      <select id="f-importance"><option value="">All importance</option></select>
+      <select id="f-status"><option value="">All status</option></select>
+      <select id="f-contest_type"><option value="">All contest types</option></select>
+    </div>
+
+    <h3>Rating</h3>
+    <div class="row">
+      <input type="number" id="f-rating_min" placeholder="min">
+      <input type="number" id="f-rating_max" placeholder="max">
+    </div>
+
+    <h3 style="margin-top:24px">Sort</h3>
+    <div class="row">
+      <select id="f-sort">
+        <option value="date_added">Date added</option>
+        <option value="rating">Rating</option>
+        <option value="difficulty">Difficulty</option>
+        <option value="name">Name</option>
+        <option value="importance">Importance</option>
+      </select>
+      <select id="f-order">
+        <option value="desc">Desc</option>
+        <option value="asc">Asc</option>
+      </select>
+    </div>
+
+    <button style="margin-top:18px;width:100%" id="btn-clear">Clear filters</button>
+  </aside>
+
+  <main>
+    <div class="search-row">
+      <input id="search" type="text" placeholder="Search by name, tag, key idea, sub-topic, notes…" />
+      <button id="btn-export">Export Excel</button>
+    </div>
+    <div id="problems-table-wrap"></div>
+  </main>
+</div>
+</div>
+
+<!-- ============== ASSIGNED CONTESTS view ============== -->
+<div id="tab-content-assigned-contests" style="display:none; padding: 16px 20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="margin:0;font-size:18px">Assigned Contests</h2>
+    <span class="stats" id="assigned-contests-stats"></span>
+  </div>
+  <div id="assigned-contests-grid" class="team-grid"></div>
+</div>
+
+<!-- ============== TEAMS view ============== -->
+<div id="tab-content-teams" style="display:none; padding: 16px 20px;">
+  <!-- Team grid (default view) -->
+  <div id="teams-grid-view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2 style="margin:0;font-size:18px">Teams</h2>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px">
+          <input type="checkbox" id="teams-mine"> Only mine
+        </label>
+        <button class="primary" id="btn-new-team" data-canmanage>+ New Team</button>
+      </div>
+    </div>
+    <div id="teams-grid" class="team-grid"></div>
+  </div>
+  <!-- Team detail (drilldown) -->
+  <div id="team-detail-view" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <button id="btn-team-back">← Back to teams</button>
+      <h2 style="margin:0;font-size:18px" id="team-detail-name"></h2>
+      <span class="stats" id="team-detail-stats"></span>
+    </div>
+    <div id="team-detail-problems"></div>
+  </div>
+</div>
+
+<!-- ============== PROBLEM BANK view (Admin/Coach) ============== -->
+<div id="tab-content-problem-bank" style="display:none; padding: 16px 20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="margin:0;font-size:18px">Problem Bank</h2>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="stats" id="bank-problems-stats"></span>
+      <button id="btn-bank-new" class="primary" data-canwrite>+ New Problem</button>
+    </div>
+  </div>
+  <div class="users-toolbar">
+    <input id="bank-q" placeholder="Search name, tag, key idea, sub-topic, notes" style="flex:1;min-width:240px">
+    <select id="bank-platform"><option value="">All platforms</option></select>
+    <select id="bank-topic"><option value="">All topics</option></select>
+    <select id="bank-difficulty"><option value="">All difficulties</option></select>
+    <input type="number" id="bank-rating-min" placeholder="rating ≥">
+    <input type="number" id="bank-rating-max" placeholder="rating ≤">
+    <select id="bank-sort" title="Sort by">
+      <option value="date_added">Sort: Date added</option>
+      <option value="rating">Sort: Rating</option>
+      <option value="difficulty">Sort: Difficulty</option>
+      <option value="name">Sort: Name</option>
+    </select>
+    <select id="bank-order" title="Order">
+      <option value="desc">↓ Desc</option>
+      <option value="asc">↑ Asc</option>
+    </select>
+  </div>
+  <div id="bank-problems-wrap"></div>
+</div>
+
+<!-- ============== CONTEST BANK view (Admin/Coach) ============== -->
+<div id="tab-content-contest-bank" style="display:none; padding: 16px 20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="margin:0;font-size:18px">Contest Bank</h2>
+    <div style="display:flex;gap:8px">
+      <input id="contest-q" placeholder="Search contests" style="background:var(--panel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:5px;font-size:13px">
+      <button id="btn-new-contest" class="primary">+ New Contest</button>
+    </div>
+  </div>
+  <div id="contests-grid" class="team-grid"></div>
+</div>
+
+<!-- ============== USERS view (Admin/Coach) ============== -->
+<div id="tab-content-users" style="display:none; padding: 16px 20px;">
+  <!-- Users grid (default view) -->
+  <div id="users-grid-view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2 style="margin:0;font-size:18px">Users</h2>
+      <button class="primary" id="btn-new-user" data-isadmin>+ New User</button>
+    </div>
+    <div class="users-toolbar">
+      <input id="users-q" placeholder="Search name, email, handle, institution">
+      <select id="users-role">
+        <option value="">All roles</option>
+        <option value="Admin">Admin</option>
+        <option value="Coach">Coach</option>
+        <option value="Contestant">Contestant</option>
+      </select>
+    </div>
+    <div id="users-table-wrap"></div>
+  </div>
+  <!-- User detail (drilldown) -->
+  <div id="user-detail-view" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <button id="btn-user-back">← Back to users</button>
+      <h2 style="margin:0;font-size:18px" id="user-detail-name"></h2>
+      <span class="stats" id="user-detail-stats"></span>
+    </div>
+    <div id="user-detail-problems"></div>
+  </div>
+</div>
+
+</div> <!-- /view-app -->
+
+
+<!-- =====================  Problem modal  ===================== -->
+<div class="modal-bg" id="modal-bg-problem">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="problem-modal-title">New Problem</h2>
+      <button id="problem-modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="problem-form" autocomplete="off">
+        <input type="hidden" id="f_id">
+        <div class="form-grid">
+          <div class="field full">
+            <label>URL *</label>
+            <div style="display:flex;gap:6px">
+              <input id="f_url" type="url" required style="flex:1">
+              <button type="button" id="btn-fetch-name" title="Fetch metadata from URL">Fetch details</button>
+            </div>
+            <div class="hint">For Codeforces URLs we'll auto-fill name, rating, tags and difficulty from the official API. Other platforms get a best-effort name fetch.</div>
+          </div>
+          <div class="field full"><label>Name <span style="color:var(--muted);font-weight:400">(optional - auto-fetched if blank)</span></label><input id="f_name"></div>
+          <div class="field"><label>Platform *</label><select id="f_platform" required></select></div>
+          <div class="field"><label>Contest Type</label><select id="f_contest_type"><option value=""></option></select></div>
+          <div class="field"><label>Rating</label><input id="f_rating" type="number"></div>
+          <div class="field"><label>Difficulty</label><select id="f_difficulty"><option value=""></option></select></div>
+          <div class="field"><label>Importance</label><select id="f_importance"><option value=""></option></select></div>
+          <div class="field"><label>Topic</label><select id="f_topic"><option value=""></option></select></div>
+          <div class="field"><label>Sub-topic</label><input id="f_sub_topic"></div>
+          <div class="field full"><label>Tags</label><input id="f_tags" placeholder="comma-separated"></div>
+          <div class="field full">
+            <label>Assign to users (optional - multiple)</label>
+            <div class="ms-wrap" id="ms-users">
+              <div class="ms-chips" id="ms-users-chips"></div>
+              <input class="ms-input" id="ms-users-input" type="text" placeholder="Add user(s)…" autocomplete="off">
+              <div class="ms-dropdown" id="ms-users-dropdown"></div>
+            </div>
+          </div>
+          <div class="field full">
+            <label>Assign to teams (optional - multiple)</label>
+            <div class="ms-wrap" id="ms-teams">
+              <div class="ms-chips" id="ms-teams-chips"></div>
+              <input class="ms-input" id="ms-teams-input" type="text" placeholder="Add team(s)…" autocomplete="off">
+              <div class="ms-dropdown" id="ms-teams-dropdown"></div>
+            </div>
+            <div class="hint">Each selected user, plus members of every selected team, will see this problem.</div>
+          </div>
+          <div class="field full"><label>Key Idea / Trick</label><textarea id="f_key_idea"></textarea></div>
+          <div class="field full"><label>Notes</label><textarea id="f_notes"></textarea></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button id="problem-modal-cancel">Cancel</button>
+      <button id="problem-modal-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================  Team modal  ===================== -->
+<div class="modal-bg" id="modal-bg-team">
+  <div class="modal sm">
+    <div class="modal-header"><h2 id="team-modal-title">New Team</h2><button id="team-modal-close">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="tm_id">
+      <div class="field"><label>Team name *</label><input id="tm_name"></div>
+      <div class="field"><label>Institution</label><input id="tm_institution"></div>
+      <div class="field"><label>Description</label><textarea id="tm_description"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button id="team-modal-cancel">Cancel</button>
+      <button id="team-modal-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================  User-create modal (admin)  ===================== -->
+<div class="modal-bg" id="modal-bg-user">
+  <div class="modal sm">
+    <div class="modal-header"><h2>New User</h2><button id="user-modal-close">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Full name *</label><input id="us_name"></div>
+      <div class="field"><label>Email *</label><input id="us_email" type="email"></div>
+      <div class="field"><label>Password (min 8) *</label><input id="us_password" type="password"></div>
+      <div class="field"><label>Role *</label><select id="us_role">
+        <option value="Contestant">Contestant</option>
+        <option value="Coach">Coach</option>
+        <option value="Admin">Admin</option>
+      </select></div>
+      <div class="field"><label>Codeforces handle</label><input id="us_handle"></div>
+      <div class="field"><label>Institution</label><input id="us_institution"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="user-modal-cancel">Cancel</button>
+      <button id="user-modal-save" class="primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================  Bank: Assign modal (problem or contest)  ===================== -->
+<div class="modal-bg" id="modal-bg-assign">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2 id="assign-modal-title">Assign</h2>
+      <button id="assign-modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="assign-target-info" style="margin-bottom:10px;color:var(--muted);font-size:12px"></div>
+      <div class="field full">
+        <label>Assign to users</label>
+        <div class="ms-wrap" id="ms-bank-users">
+          <div class="ms-chips" id="ms-bank-users-chips"></div>
+          <input class="ms-input" id="ms-bank-users-input" type="text" placeholder="Add user(s)…" autocomplete="off">
+          <div class="ms-dropdown" id="ms-bank-users-dropdown"></div>
+        </div>
+      </div>
+      <div class="field full">
+        <label>Assign to teams</label>
+        <div class="ms-wrap" id="ms-bank-teams">
+          <div class="ms-chips" id="ms-bank-teams-chips"></div>
+          <input class="ms-input" id="ms-bank-teams-input" type="text" placeholder="Add team(s)…" autocomplete="off">
+          <div class="ms-dropdown" id="ms-bank-teams-dropdown"></div>
+        </div>
+        <div class="hint" id="assign-modal-hint">Pick at least one user or team. The problem will move out of the bank into your Problems tab.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="assign-modal-cancel">Cancel</button>
+      <button id="assign-modal-save" class="primary">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================  Contest create/edit modal  ===================== -->
+<div class="modal-bg" id="modal-bg-contest">
+  <div class="modal sm">
+    <div class="modal-header"><h2 id="contest-modal-title">New Contest</h2><button id="contest-modal-close">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cm_id">
+      <div class="field"><label>Name *</label><input id="cm_name"></div>
+      <div class="field"><label>Platform</label><select id="cm_platform"><option value=""></option></select></div>
+      <div class="field"><label>Contest Type</label><select id="cm_contest_type"><option value=""></option></select></div>
+      <div class="field"><label>Year</label><input id="cm_contest_year" type="number"></div>
+      <div class="field"><label>URL</label><input id="cm_url" type="url"></div>
+      <div class="field"><label>Notes</label><textarea id="cm_notes"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button id="contest-modal-cancel">Cancel</button>
+      <button id="contest-modal-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================  Update Attempt modal (contestant)  ===================== -->
+<div class="modal-bg" id="modal-bg-attempt">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2>Update your attempt</h2>
+      <button id="att-modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="att-problem-name" style="margin-bottom:10px;color:var(--muted);font-size:12px"></div>
+      <div class="field">
+        <label>Attempt Status *</label>
+        <select id="att_status"><option value=""></option></select>
+      </div>
+      <div class="field">
+        <label>Problem Faced</label>
+        <select id="att_problem_faced"><option value=""></option></select>
+      </div>
+      <div class="field" id="att-phase-row" style="display:none">
+        <label>When did you solve this? <span id="att-phase-req" style="color:var(--red);display:none">*</span></label>
+        <select id="att_phase"><option value=""></option></select>
+        <div class="hint" style="font-size:12px;color:var(--muted);margin-top:4px">
+          Required for Accepted. Tells your team which problems you solved during the simulated 5-hour contest vs. while upsolving later.
+        </div>
+      </div>
+      <div class="field" id="att-time-row">
+        <label>Time Spent (minutes) <span id="att-time-req" style="color:var(--red);display:none">*</span></label>
+        <input id="att_time_spent_min" type="number" min="0" placeholder="e.g. 25">
+      </div>
+      <div class="field" id="att-notes-row">
+        <label>Notes / Learning <span id="att-notes-req" style="color:var(--red);display:none">*</span></label>
+        <textarea id="att_notes" placeholder="What you learned, key insight, blockers…"></textarea>
+      </div>
+      <div class="hint" id="att-accepted-hint" style="display:none;color:var(--amber);margin-top:6px">
+        Marking <b>Accepted</b> requires both Time Spent and Notes.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="att-modal-cancel">Cancel</button>
+      <button id="att-modal-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================  Settings modal (profile + password)  ===================== -->
+<div class="modal-bg" id="modal-bg-pw">
+  <div class="modal sm">
+    <div class="modal-header"><h2>Settings</h2><button id="pw-modal-close">×</button></div>
+    <div class="modal-body">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Your profile</div>
+      <div class="field"><label>Name *</label><input id="pf-name"></div>
+      <div class="field"><label>Email</label><input id="pf-email" disabled style="opacity:.6"><div class="hint">Email can only be changed by an Admin.</div></div>
+      <div class="field"><label>Codeforces handle</label><input id="pf-handle"></div>
+      <div class="field"><label>Institution</label><input id="pf-institution"></div>
+      <div class="field" id="pf-year-row"><label>Year of study</label><input id="pf-year" type="number" min="1" max="10"></div>
+      <div style="text-align:right;margin-bottom:6px">
+        <button id="pf-save" class="primary">Save profile</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0 14px">
+
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Change password</div>
+      <div class="field"><label>Current password</label><input id="pw-current" type="password" autocomplete="current-password"></div>
+      <div class="field"><label>New password (min 8)</label><input id="pw-new" type="password" autocomplete="new-password"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="pw-modal-cancel">Close</button>
+      <button id="pw-modal-save" class="primary">Update password</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "/api";
+let META = {};
+let ME = null;
+let CURRENT_FILTERS = new URLSearchParams();
+let TEAMS_CACHE = [];
+let USERS_CACHE = [];
+
+const $  = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+// ========================================================================
+// helpers
+// ========================================================================
+function toast(msg, type = "") {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "toast show " + type;
+  setTimeout(() => t.className = "toast " + type, 2400);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+    ...opts,
+  });
+  let body = null;
+  try { body = await res.json(); } catch (_) {}
+  if (!res.ok) {
+    const err = (body && body.error) || res.statusText;
+    const e = new Error(err); e.status = res.status; e.body = body;
+    throw e;
+  }
+  return body;
+}
+
+function fillSelect(el, options, includeBlank = true, blankLabel = "") {
+  const blank = includeBlank ? `<option value="">${blankLabel}</option>` : "";
+  el.innerHTML = blank + options.map(o => `<option value="${o}">${o}</option>`).join('');
+}
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+const canWrite     = () => ME && (ME.role === "Admin" || ME.role === "Coach");
+const isAdmin      = () => ME && ME.role === "Admin";
+const canManage    = (team) => isAdmin() || (team.coaches || []).some(c => c.id === ME.id);
+
+// ========================================================================
+// AUTH
+// ========================================================================
+async function checkAuth() {
+  const r = await api("/auth/me");
+  if (r.authenticated) {
+    ME = r.user;
+    showApp();
+  } else {
+    showAuth();
+  }
+}
+function showAuth() { $("#view-auth").style.display = "flex"; $("#view-app").style.display = "none"; }
+function showApp()  { $("#view-auth").style.display = "none"; $("#view-app").style.display = "block"; renderMe(); applyPermissions(); init(); }
+
+function renderMe() {
+  $("#me-name").textContent = ME.name;
+  $("#me-role").textContent = ME.role;
+  $("#me-role").className = "role-badge pill-" + ME.role;
+}
+
+function applyPermissions() {
+  $$("[data-canwrite]").forEach(el => el.style.display = canWrite() ? "" : "none");
+  $$("[data-canmanage]").forEach(el => el.style.display = canWrite() ? "" : "none");
+  $$("[data-isadmin]").forEach(el => el.style.display = isAdmin() ? "" : "none");
+  $("#tab-users").style.display         = (isAdmin() || ME.role === "Coach") ? "" : "none";
+  $("#tab-problem-bank").style.display  = canWrite() ? "" : "none";
+  $("#tab-contest-bank").style.display  = canWrite() ? "" : "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // auth screen toggles
+  $("#show-signup").addEventListener("click", () => {
+    $("#login-form").style.display = "none";
+    $("#signup-form").style.display = "";
+    $("#auth-title").textContent = "Create account";
+    $("#auth-lede").textContent = "Public signup creates a Contestant account. Admins/Coaches are added by an admin.";
+  });
+  $("#show-login").addEventListener("click", () => {
+    $("#signup-form").style.display = "none";
+    $("#login-form").style.display = "";
+    $("#auth-title").textContent = "Sign in";
+    $("#auth-lede").textContent = "Welcome back to the ICPC training repository.";
+  });
+  $("#login-submit").addEventListener("click", doLogin);
+  $("#signup-submit").addEventListener("click", doSignup);
+  ["login-password","login-email"].forEach(id => $("#"+id).addEventListener("keydown", e => { if (e.key==="Enter") doLogin(); }));
+  ["signup-password","signup-email","signup-name","signup-handle","signup-institution"].forEach(id =>
+    $("#"+id).addEventListener("keydown", e => { if (e.key==="Enter") doSignup(); }));
+
+  $("#btn-logout").addEventListener("click", doLogout);
+  $("#btn-change-pw").addEventListener("click", openSettingsModal);
+  $("#pw-modal-close").addEventListener("click", () => $("#modal-bg-pw").classList.remove("show"));
+  $("#pw-modal-cancel").addEventListener("click", () => $("#modal-bg-pw").classList.remove("show"));
+  $("#pw-modal-save").addEventListener("click", changePassword);
+  $("#pf-save").addEventListener("click", saveProfile);
+
+  checkAuth();
+});
+
+async function doLogin() {
+  try {
+    ME = await api("/auth/login", { method: "POST", body: JSON.stringify({
+      email: $("#login-email").value.trim(), password: $("#login-password").value,
+    })});
+    showApp();
+  } catch (e) { toast(e.message, "error"); }
+}
+async function doSignup() {
+  try {
+    ME = await api("/auth/signup", { method: "POST", body: JSON.stringify({
+      name: $("#signup-name").value.trim(),
+      email: $("#signup-email").value.trim(),
+      password: $("#signup-password").value,
+      handle: $("#signup-handle").value.trim(),
+      institution: $("#signup-institution").value.trim(),
+    })});
+    showApp();
+  } catch (e) { toast(e.message, "error"); }
+}
+async function doLogout() {
+  await api("/auth/logout", { method: "POST" });
+  ME = null; showAuth();
+}
+function openSettingsModal() {
+  // Pre-fill profile fields from the current ME state
+  $("#pf-name").value        = ME.name        || "";
+  $("#pf-email").value       = ME.email       || "";
+  $("#pf-handle").value      = ME.handle      || "";
+  $("#pf-institution").value = ME.institution || "";
+  $("#pf-year").value        = ME.year_of_study ?? "";
+  // Year-of-study only relevant for Contestants
+  $("#pf-year-row").style.display = ME.role === "Contestant" ? "" : "none";
+  // Reset password fields each open
+  $("#pw-current").value = "";
+  $("#pw-new").value     = "";
+  $("#modal-bg-pw").classList.add("show");
+}
+
+async function saveProfile() {
+  const payload = {
+    name:        $("#pf-name").value.trim(),
+    handle:      $("#pf-handle").value.trim() || null,
+    institution: $("#pf-institution").value.trim() || null,
+  };
+  if (ME.role === "Contestant") {
+    const y = $("#pf-year").value;
+    payload.year_of_study = y === "" ? null : Number(y);
+  }
+  if (!payload.name) { toast("Name is required", "error"); return; }
+  try {
+    const updated = await api(`/users/${ME.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    ME = updated;
+    renderMe();
+    toast("Profile updated", "success");
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function changePassword() {
+  try {
+    await api("/auth/password", { method: "POST", body: JSON.stringify({
+      current_password: $("#pw-current").value, new_password: $("#pw-new").value,
+    })});
+    $("#modal-bg-pw").classList.remove("show");
+    $("#pw-current").value = ""; $("#pw-new").value = "";
+    toast("Password updated", "success");
+  } catch (e) { toast(e.message, "error"); }
+}
+
+// ========================================================================
+// app init
+// ========================================================================
+async function loadMeta() {
+  META = await api("/meta");
+  fillSelect($("#f-platform"),     META.platforms,     true, "All platforms");
+  fillSelect($("#f-topic"),        META.topics,        true, "All topics");
+  fillSelect($("#f-difficulty"),   META.difficulties,  true, "All difficulties");
+  fillSelect($("#f-importance"),   META.importance,    true, "All importance");
+  fillSelect($("#f-status"),       META.statuses,      true, "All status");
+  fillSelect($("#f-contest_type"), META.contest_types, true, "All contest types");
+  fillSelect($("#f_platform"),     META.platforms,     false);
+  fillSelect($("#f_contest_type"), META.contest_types, true);
+  fillSelect($("#f_difficulty"),   META.difficulties,  true);
+  fillSelect($("#f_importance"),   META.importance,    true);
+  fillSelect($("#f_topic"),        META.topics,        true);
+}
+
+function init() {
+  loadMeta().then(() => {
+    refreshProblems();
+
+    $$("aside select, aside input").forEach(el => el.addEventListener("change", refreshProblems));
+    $("#search").addEventListener("input", debounce(refreshProblems, 250));
+    $("#btn-clear").addEventListener("click", () => {
+      $$("aside select").forEach(s => s.selectedIndex = 0);
+      $$("aside input").forEach(s => s.value = "");
+      $("#f-sort").value = "date_added"; $("#f-order").value = "desc";
+      $("#search").value = ""; refreshProblems();
+    });
+
+    $("#btn-bank-new").addEventListener("click", () => openProblemModal());
+    $("#problem-modal-close").addEventListener("click", () => $("#modal-bg-problem").classList.remove("show"));
+    $("#problem-modal-cancel").addEventListener("click", () => $("#modal-bg-problem").classList.remove("show"));
+    $("#problem-modal-save").addEventListener("click", saveProblem);
+    $("#modal-bg-problem").addEventListener("click", e => { if (e.target.id === "modal-bg-problem") $("#modal-bg-problem").classList.remove("show"); });
+    $("#btn-fetch-name").addEventListener("click", fetchNameFromURL);
+    userMS.wire();
+    teamMS.wire();
+    if (canWrite()) loadAssignmentOptions();
+
+    // Attempt modal
+    $("#att-modal-close").addEventListener("click", () => $("#modal-bg-attempt").classList.remove("show"));
+    $("#att-modal-cancel").addEventListener("click", () => $("#modal-bg-attempt").classList.remove("show"));
+    $("#att-modal-save").addEventListener("click", saveAttempt);
+    $("#att_status").addEventListener("change", updateAcceptedHints);
+    $("#modal-bg-attempt").addEventListener("click", (e) => { if (e.target.id === "modal-bg-attempt") $("#modal-bg-attempt").classList.remove("show"); });
+
+    // Bank assign modal
+    bankUserMS.wire();
+    bankTeamMS.wire();
+    $("#assign-modal-close").addEventListener("click", () => $("#modal-bg-assign").classList.remove("show"));
+    $("#assign-modal-cancel").addEventListener("click", () => $("#modal-bg-assign").classList.remove("show"));
+    $("#assign-modal-save").addEventListener("click", saveAssign);
+    $("#modal-bg-assign").addEventListener("click", (e) => { if (e.target.id === "modal-bg-assign") $("#modal-bg-assign").classList.remove("show"); });
+
+    // Problem Bank toolbar
+    $("#bank-q").addEventListener("input", debounce(refreshBankProblems, 250));
+    ["bank-platform","bank-topic","bank-difficulty","bank-rating-min","bank-rating-max",
+     "bank-sort","bank-order"].forEach(id =>
+      $("#"+id).addEventListener("change", refreshBankProblems));
+
+    // Contest Bank toolbar
+    $("#contest-q").addEventListener("input", debounce(refreshContests, 250));
+    $("#btn-new-contest").addEventListener("click", () => openContestModal());
+    $("#contest-modal-close").addEventListener("click", () => $("#modal-bg-contest").classList.remove("show"));
+    $("#contest-modal-cancel").addEventListener("click", () => $("#modal-bg-contest").classList.remove("show"));
+    $("#contest-modal-save").addEventListener("click", saveContest);
+    $("#modal-bg-contest").addEventListener("click", (e) => { if (e.target.id === "modal-bg-contest") $("#modal-bg-contest").classList.remove("show"); });
+
+    $("#btn-export").addEventListener("click", () => {
+      const qs = CURRENT_FILTERS.toString();
+      window.location.href = `${API}/export/xlsx${qs ? "?" + qs : ""}`;
+    });
+
+    // Tabs
+    $$("#tabs button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+    $("#btn-team-back").addEventListener("click", closeTeamDetail);
+    $("#btn-user-back").addEventListener("click", closeUserDetail);
+
+    // Teams
+    $("#btn-new-team").addEventListener("click", () => openTeamModal());
+    $("#team-modal-close").addEventListener("click", () => $("#modal-bg-team").classList.remove("show"));
+    $("#team-modal-cancel").addEventListener("click", () => $("#modal-bg-team").classList.remove("show"));
+    $("#team-modal-save").addEventListener("click", saveTeam);
+    $("#teams-mine").addEventListener("change", refreshTeams);
+
+    // Users
+    $("#btn-new-user").addEventListener("click", () => $("#modal-bg-user").classList.add("show"));
+    $("#user-modal-close").addEventListener("click", () => $("#modal-bg-user").classList.remove("show"));
+    $("#user-modal-cancel").addEventListener("click", () => $("#modal-bg-user").classList.remove("show"));
+    $("#user-modal-save").addEventListener("click", createUser);
+    $("#users-q").addEventListener("input", debounce(refreshUsers, 250));
+    $("#users-role").addEventListener("change", refreshUsers);
+  });
+}
+
+function switchTab(name) {
+  $$("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  ["problems","assigned-contests","teams","users","problem-bank","contest-bank"].forEach(t =>
+    $(`#tab-content-${t}`).style.display = (t === name ? "" : "none"));
+  // Reset drilldowns whenever the user switches tabs.
+  closeTeamDetail();
+  closeUserDetail();
+  if (name === "teams")             refreshTeams();
+  if (name === "users")             refreshUsers();
+  if (name === "problem-bank")      refreshBankProblems();
+  if (name === "contest-bank")      refreshContests();
+  if (name === "assigned-contests") refreshAssignedContests();
+}
+
+// ========================================================================
+// PROBLEMS
+// ========================================================================
+function buildQuery() {
+  const p = new URLSearchParams();
+  const map = {
+    platform: "f-platform", topic: "f-topic", difficulty: "f-difficulty",
+    importance: "f-importance", status: "f-status",
+    contest_type: "f-contest_type", rating_min: "f-rating_min",
+    rating_max: "f-rating_max",
+    sort: "f-sort", order: "f-order",
+  };
+  for (const [k, id] of Object.entries(map)) {
+    const v = $("#" + id).value; if (v) p.set(k, v);
+  }
+  const q = $("#search").value.trim(); if (q) p.set("q", q);
+  CURRENT_FILTERS = p;
+  return p.toString();
+}
+
+let CURRENT_PROBLEMS = [];
+async function refreshProblems() {
+  const data = await api("/problems?" + buildQuery());
+  CURRENT_PROBLEMS = data.results;
+  renderProblems(data.results);
+}
+
+function renderProblems(rows) {
+  const wrap = $("#problems-table-wrap");
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty"><h2>No problems yet</h2><p>${canWrite() ? 'Click <b>+ New Problem</b> to add one.' : 'No problems are visible to you yet.'}</p></div>`;
+    return;
+  }
+  if (ME.role === "Contestant") {
+    renderContestantTable(rows, wrap);
+  } else {
+    renderCoachAdminTable(rows, wrap);
+  }
+  $$("th[data-sort]").forEach(th => th.addEventListener("click", () => {
+    $("#f-sort").value = th.dataset.sort;
+    $("#f-order").value = $("#f-order").value === "asc" ? "desc" : "asc";
+    refreshProblems();
+  }));
+}
+
+// ---------- Contestant view ----------
+function renderContestantTable(rows, wrap) {
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th data-sort="name">Name</th><th>Platform / Contest</th>
+        <th data-sort="rating">Rating</th><th>Difficulty</th><th>Topic</th>
+        <th>Tags</th><th>Imp.</th>
+        <th>Status</th><th>Problem Faced</th><th>Time</th><th>Notes / Learning</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows.map(r => contestantRow(r)).join("")}</tbody>
+    </table>`;
+  $$("#problems-table-wrap button[data-action='attempt']").forEach(b =>
+    b.addEventListener("click", () => openAttemptModal(parseInt(b.dataset.id, 10)))
+  );
+  // Hydrate the AI-tutorial cells (status-aware buttons + polling)
+  hydrateAITutorialCells($("#problems-table-wrap"));
+  // also let row click open the attempt modal
+  $$("#problems-table-wrap tr[data-id]").forEach(tr => tr.addEventListener("click", (e) => {
+    if (e.target.closest("a,button")) return;
+    openAttemptModal(parseInt(tr.dataset.id, 10));
+  }));
+}
+
+function contestantRow(r) {
+  const a = r.my_attempt || {};
+  const statusPill = a.attempt_status
+    ? `<span class="pill pill-${(a.attempt_status||'').replace(/\\s/g,'')}">${a.attempt_status}</span>`
+    : `<span class="pill pill-Todo">TODO</span>`;
+  return `
+    <tr data-id="${r.id}" style="cursor:pointer">
+      <td><a href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHtml(r.name)}</a>
+          ${r.problem_index ? `<span class="tag">${r.problem_index}</span>` : ""}</td>
+      <td><div>${r.platform || ""}</div>
+          <div style="color:var(--muted);font-size:11px">${escapeHtml(r.contest_name || "")} ${r.contest_year ? "· " + r.contest_year : ""}</div></td>
+      <td>${r.rating ?? ""}</td>
+      <td>${r.difficulty || ""}</td>
+      <td><div>${r.topic || ""}</div>${r.sub_topic ? `<div style="color:var(--muted);font-size:11px">${escapeHtml(r.sub_topic)}</div>` : ""}</td>
+      <td>${(r.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</td>
+      <td>${r.importance ? `<span class="pill pill-${importancePillClass(r.importance)}">${r.importance}</span>` : ""}</td>
+      <td>${statusPill}</td>
+      <td style="font-size:12px;color:var(--muted)">${escapeHtml(a.problem_faced || "")}</td>
+      <td>${a.time_spent_min != null ? a.time_spent_min + " min" : ""}</td>
+      <td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(a.notes || "")}">${escapeHtml(a.notes || "")}</td>
+      <td><div style="display:flex;gap:4px;justify-content:flex-end;align-items:center">
+        <button data-action="attempt" data-id="${r.id}" class="primary" style="padding:3px 8px;font-size:11px">Update</button>
+        <span class="ai-tut-cell" data-pid="${r.id}">…</span>
+      </div></td>
+    </tr>`;
+}
+
+// Map our new importance vocabulary onto pill classes (existing CSS uses old ones)
+function importancePillClass(imp) {
+  return ({
+    "Critical":       "Critical",
+    "Very Important": "High",
+    "Important":      "Medium",
+    "Normal":         "Low",
+  })[imp] || "Low";
+}
+
+// ---------- Coach / Admin view ----------
+function renderCoachAdminTable(rows, wrap) {
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th data-sort="name">Name</th><th>Platform / Contest</th>
+        <th data-sort="rating">Rating</th><th>Difficulty</th><th>Topic</th>
+        <th>Tags</th><th>Imp.</th>
+        <th>Solved</th><th>AI Tutorial</th>
+      </tr></thead>
+      <tbody>${rows.map(r => coachRow(r)).join("")}</tbody>
+    </table>`;
+  $$("#problems-table-wrap tr[data-id]").forEach(tr => tr.addEventListener("click", (e) => {
+    if (e.target.closest("a,button")) return;
+    toggleCoachExpand(tr);
+  }));
+  // Hydrate the AI-tutorial cells (status-aware buttons + polling)
+  hydrateAITutorialCells($("#problems-table-wrap"));
+}
+
+function coachRow(r) {
+  const summary = (r.team_summary || []).map(t =>
+    `<span class="pill pill-${t.solved >= t.total && t.total > 0 ? 'Done' : (t.solved > 0 ? 'InProgress' : 'Todo')}">${escapeHtml(t.team_name)} ${t.solved}/${t.total}</span>`
+  ).join(" ") || `<span style="color:var(--muted);font-size:12px">unassigned</span>`;
+  return `
+    <tr data-id="${r.id}" style="cursor:pointer">
+      <td><a href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHtml(r.name)}</a>
+          ${r.problem_index ? `<span class="tag">${r.problem_index}</span>` : ""}</td>
+      <td><div>${r.platform || ""}</div>
+          <div style="color:var(--muted);font-size:11px">${escapeHtml(r.contest_name || "")} ${r.contest_year ? "· " + r.contest_year : ""}</div></td>
+      <td>${r.rating ?? ""}</td>
+      <td>${r.difficulty || ""}</td>
+      <td><div>${r.topic || ""}</div>${r.sub_topic ? `<div style="color:var(--muted);font-size:11px">${escapeHtml(r.sub_topic)}</div>` : ""}</td>
+      <td>${(r.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</td>
+      <td>${r.importance ? `<span class="pill pill-${importancePillClass(r.importance)}">${r.importance}</span>` : ""}</td>
+      <td>${summary}</td>
+      <td><button data-action="ai-tutorial" data-id="${r.id}" onclick="event.stopPropagation()" title="AI Tutorial" style="padding:3px 10px;font-size:11px">💡 Tutorial</button></td>
+    </tr>`;
+}
+
+function toggleCoachExpand(tr) {
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains("expanded-row")) {
+    next.remove();
+    return;
+  }
+  // Collapse any other expanded row in this table
+  $$("#problems-table-wrap tr.expanded-row").forEach(x => x.remove());
+
+  const id = parseInt(tr.dataset.id, 10);
+  const r  = (CURRENT_PROBLEMS || []).find(p => p.id === id);
+  if (!r) return;
+  const ts = r.team_summary || [];
+  const colCount = tr.cells.length;
+  const exp = document.createElement("tr");
+  exp.className = "expanded-row";
+  exp.innerHTML = `<td colspan="${colCount}" style="background:#0e1116;padding:14px 16px">
+    ${ts.length ? ts.map(team => teamBreakdownBlock(team)).join("") :
+      '<div style="color:var(--muted)">No assignments yet.</div>'}
+  </td>`;
+  tr.after(exp);
+}
+
+function teamBreakdownBlock(team) {
+  const rows = (team.members || []).map(m => `
+    <tr>
+      <td>${escapeHtml(m.name)}${m.role_in_team === 'Reserve' ? ' <span class="tag">Reserve</span>' : ''}</td>
+      <td>${m.attempt_status ? `<span class="pill pill-${(m.attempt_status||'').replace(/\\s/g,'')}">${m.attempt_status}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="color:var(--muted);font-size:12px">${escapeHtml(m.problem_faced || "")}</td>
+      <td>${m.time_spent_min != null ? m.time_spent_min + " min" : ""}</td>
+      <td style="font-size:12px;color:var(--muted)">${escapeHtml(m.notes || "")}</td>
+    </tr>`).join("");
+  return `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <strong style="font-size:13px">${escapeHtml(team.team_name)}</strong>
+        <span class="pill pill-${team.solved >= team.total && team.total > 0 ? 'Done' : (team.solved > 0 ? 'InProgress' : 'Todo')}">${team.solved}/${team.total}</span>
+        ${team.reserve_total ? `<span style="color:var(--muted);font-size:11px">Reserve ${team.reserve_solved}/${team.reserve_total}</span>` : ""}
+      </div>
+      <table style="background:var(--panel-2)">
+        <thead><tr>
+          <th>Member</th><th>Status</th><th>Problem Faced</th><th>Time</th><th>Notes / Learning</th>
+        </tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" style="color:var(--muted)">No members</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
+function openProblemModal(item = null) {
+  $("#problem-modal-title").textContent = item ? "Edit Problem" : "New Problem";
+  $("#problem-form").reset();
+  $("#f_id").value = "";
+  userMultiSet([]);
+  teamMultiSet([]);
+  if (item) {
+    $("#f_id").value = item.id;
+    ["name","url","platform","contest_type",
+     "difficulty","importance","topic","sub_topic","key_idea","notes"
+    ].forEach(k => $(`#f_${k}`).value = item[k] || "");
+    ["rating"].forEach(k => $(`#f_${k}`).value = item[k] ?? "");
+    $("#f_tags").value = (item.tags || []).join(", ");
+    if (item.assigned_users && item.assigned_users.length) userMultiSet(item.assigned_users);
+    if (item.assigned_teams && item.assigned_teams.length) teamMultiSet(item.assigned_teams);
+  }
+  // Fire-and-forget refresh of options each open in case team/user list changed
+  loadAssignmentOptions();
+  $("#modal-bg-problem").classList.add("show");
+}
+
+async function saveProblem() {
+  const id = $("#f_id").value;
+  const payload = {};
+  ["name","url","platform","contest_type",
+   "difficulty","importance","topic","sub_topic","key_idea","notes"
+  ].forEach(k => payload[k] = $(`#f_${k}`).value.trim());
+  ["rating"].forEach(k => payload[k] = $(`#f_${k}`).value || null);
+  payload.tags = $("#f_tags").value;
+  payload.assigned_user_ids = SELECTED_USERS.map(u => u.id);
+  payload.assigned_team_ids = SELECTED_TEAMS.map(t => t.id);
+
+  // Name now optional; URL + Platform still required
+  if (!payload.url || !payload.platform) {
+    toast("URL and Platform are required", "error");
+    return;
+  }
+  try {
+    await api(id ? `/problems/${id}` : "/problems", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+    $("#modal-bg-problem").classList.remove("show");
+    toast(id ? "Updated" : "Added", "success");
+    // Refresh whichever list view drove this edit (and the other if it's open).
+    if ($("#tab-content-problem-bank").style.display !== "none") refreshBankProblems();
+    if ($("#tab-content-problems").style.display !== "none")     refreshProblems();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+// ---- Fetch details button (CF API + generic fallback) ----
+async function fetchNameFromURL() {
+  const url = $("#f_url").value.trim();
+  if (!url) { toast("Enter a URL first", "error"); return; }
+  $("#btn-fetch-name").disabled = true;
+  $("#btn-fetch-name").textContent = "Fetching…";
+  try {
+    const r = await api("/lookup?url=" + encodeURIComponent(url));
+    let filled = [];
+    if (r.name)                              { $("#f_name").value = r.name; filled.push("name"); }
+    if (r.rating != null && r.rating !== "") { $("#f_rating").value = r.rating; filled.push("rating"); }
+    if (Array.isArray(r.tags) && r.tags.length) {
+      $("#f_tags").value = r.tags.join(", ");
+      filled.push("tags");
+    }
+    if (r.difficulty && (META.difficulties || []).includes(r.difficulty)) {
+      $("#f_difficulty").value = r.difficulty;
+      filled.push("difficulty");
+    }
+    if (r.topic && (META.topics || []).includes(r.topic)) {
+      $("#f_topic").value = r.topic;
+      filled.push("topic");
+    }
+    if (r.sub_topic) { $("#f_sub_topic").value = r.sub_topic; filled.push("sub-topic"); }
+    if (r.platform && (META.platforms || []).includes(r.platform)) {
+      $("#f_platform").value = r.platform;
+      filled.push("platform");
+    }
+    if (r.contest_type && (META.contest_types || []).includes(r.contest_type)) {
+      $("#f_contest_type").value = r.contest_type;
+      filled.push("contest type");
+    }
+    if (filled.length) {
+      toast(`Fetched: ${filled.join(", ")}`, "success");
+    } else {
+      toast("Couldn't fetch any details from that URL", "error");
+    }
+  } catch (e) { toast(e.message, "error"); }
+  finally {
+    $("#btn-fetch-name").disabled = false;
+    $("#btn-fetch-name").textContent = "Fetch details";
+  }
+}
+
+// ========================================================================
+// Assign to: multi user (chips) + multi team (chips)
+// ========================================================================
+let ASSIGN_OPTIONS = { users: [], teams: [] };
+let SELECTED_USERS = [];          // [{id, name}, ...]
+let SELECTED_TEAMS = [];          // [{id, name}, ...]
+
+async function loadAssignmentOptions() {
+  if (!canWrite()) return;
+  try {
+    ASSIGN_OPTIONS = await api("/assignment-options");
+  } catch (e) {
+    ASSIGN_OPTIONS = { users: [], teams: [] };
+  }
+}
+
+/* Generic multi-select factory --------------------------------------------
+ * mountId      : id of the .ms-wrap element
+ * inputId      : id of the input
+ * dropdownId   : id of the .ms-dropdown
+ * chipsId      : id of the .ms-chips
+ * getSel()     : returns selection array (live ref)
+ * setSel(a)    : assigns selection
+ * options()    : returns full option list
+ * render(o)    : returns HTML for one .ms-item (option object)
+ * filter(o, f) : true if option matches filter string
+ */
+function buildMultiSelect(cfg) {
+  function renderChips() {
+    const wrap = $("#" + cfg.chipsId);
+    const sel = cfg.getSel();
+    wrap.innerHTML = sel.map(o =>
+      `<span class="ms-chip">${escapeHtml(o.name)}<button type="button" data-rm="${o.id}" title="Remove">×</button></span>`
+    ).join("");
+    wrap.querySelectorAll("[data-rm]").forEach(b =>
+      b.addEventListener("click", () => {
+        const id = parseInt(b.dataset.rm, 10);
+        cfg.setSel(cfg.getSel().filter(x => x.id !== id));
+        renderChips();
+      })
+    );
+  }
+
+  function renderDropdown(filter) {
+    const dd = $("#" + cfg.dropdownId);
+    const f = (filter || "").toLowerCase();
+    const selectedIds = new Set(cfg.getSel().map(x => x.id));
+    const list = cfg.options().filter(o => !selectedIds.has(o.id) && cfg.filter(o, f));
+    let html;
+    if (list.length) {
+      html = list.map(o => cfg.render(o)).join("");
+    } else {
+      html = `<div class="ms-empty">${selectedIds.size && selectedIds.size === cfg.options().length ? "All options already added" : "No matches"}</div>`;
+    }
+    dd.innerHTML = html;
+    dd.querySelectorAll(".ms-item").forEach(el => el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const id = parseInt(el.dataset.id, 10);
+      const found = cfg.options().find(x => x.id === id);
+      if (found && !cfg.getSel().some(x => x.id === id)) {
+        const sel = cfg.getSel().slice();
+        sel.push({ id: found.id, name: found.name });
+        cfg.setSel(sel);
+        renderChips();
+      }
+      $("#" + cfg.inputId).value = "";
+      renderDropdown("");
+    }));
+  }
+
+  function wire() {
+    const input = $("#" + cfg.inputId);
+    const dd    = $("#" + cfg.dropdownId);
+    input.addEventListener("focus", () => { renderDropdown(input.value); dd.classList.add("show"); });
+    input.addEventListener("input", () => { renderDropdown(input.value); dd.classList.add("show"); });
+    input.addEventListener("blur",  () => setTimeout(() => dd.classList.remove("show"), 120));
+    $("#" + cfg.mountId).addEventListener("click", (e) => {
+      if (e.target.id === cfg.mountId || e.target.id === cfg.chipsId) input.focus();
+    });
+  }
+
+  return { wire, renderChips, renderDropdown };
+}
+
+/* User & Team controllers ------------------------------------------------- */
+
+const userMS = buildMultiSelect({
+  mountId: "ms-users", inputId: "ms-users-input",
+  dropdownId: "ms-users-dropdown", chipsId: "ms-users-chips",
+  getSel: () => SELECTED_USERS,
+  setSel: (a) => { SELECTED_USERS = a; },
+  options: () => ASSIGN_OPTIONS.users || [],
+  filter: (u, f) => !f || (u.name||"").toLowerCase().includes(f) ||
+                       (u.email||"").toLowerCase().includes(f) ||
+                       (u.role||"").toLowerCase().includes(f),
+  render: (u) => `<div class="ms-item" data-id="${u.id}">
+                    <span>${escapeHtml(u.name)} <span class="tag">${u.role||""}</span></span>
+                    <span class="meta">${escapeHtml(u.email || "")}</span>
+                  </div>`,
+});
+
+const teamMS = buildMultiSelect({
+  mountId: "ms-teams", inputId: "ms-teams-input",
+  dropdownId: "ms-teams-dropdown", chipsId: "ms-teams-chips",
+  getSel: () => SELECTED_TEAMS,
+  setSel: (a) => { SELECTED_TEAMS = a; },
+  options: () => ASSIGN_OPTIONS.teams || [],
+  filter: (t, f) => !f || (t.name||"").toLowerCase().includes(f) ||
+                       (t.institution||"").toLowerCase().includes(f),
+  render: (t) => `<div class="ms-item" data-id="${t.id}">
+                    <span><strong>${escapeHtml(t.name)}</strong></span>
+                    <span class="meta">${escapeHtml(t.institution || "")}</span>
+                  </div>`,
+});
+
+function userMultiSet(arr) {
+  SELECTED_USERS = (arr || []).map(u => ({ id: u.id, name: u.name }));
+  userMS.renderChips();
+}
+function teamMultiSet(arr) {
+  SELECTED_TEAMS = (arr || []).map(t => ({ id: t.id, name: t.name }));
+  teamMS.renderChips();
+}
+
+async function onRowAction(e) {
+  e.stopPropagation();
+  const id = e.currentTarget.dataset.id;
+  const action = e.currentTarget.dataset.action;
+  if (action === "edit") {
+    const item = await api(`/problems/${id}`);
+    openProblemModal(item);
+  } else if (action === "delete") {
+    if (!confirm("Delete this problem?")) return;
+    await api(`/problems/${id}`, { method: "DELETE" });
+    toast("Deleted", "success"); refreshProblems();
+  }
+}
+
+async function onBankRowAction(e) {
+  e.stopPropagation();
+  const id = e.currentTarget.dataset.id;
+  const action = e.currentTarget.dataset.action;
+  if (action === "edit") {
+    const item = await api(`/problems/${id}`);
+    openProblemModal(item);
+  } else if (action === "delete") {
+    if (!confirm("Delete this problem? It will also be removed from any teams/users it's assigned to.")) return;
+    await api(`/problems/${id}`, { method: "DELETE" });
+    toast("Deleted", "success");
+    refreshBankProblems();
+  }
+}
+
+// ========================================================================
+// Attempt modal (contestant)
+// ========================================================================
+let ATTEMPT_PROBLEM_ID = null;
+
+function openAttemptModal(problemId) {
+  const p = (CURRENT_PROBLEMS || []).find(x => x.id === problemId);
+  if (!p) return;
+  ATTEMPT_PROBLEM_ID = problemId;
+  $("#att-problem-name").textContent = p.name;
+  fillSelect($("#att_status"),         META.attempt_statuses, true, "(no change)");
+  fillSelect($("#att_problem_faced"),  META.problem_faced,    true, "(none)");
+  // Phase is mandatory for Accepted, so don't offer a blank option.  Default
+  // to "During Contest" — the more common case in a live training session,
+  // and the one we want students to think about explicitly when reaching for
+  // Upsolve.
+  fillSelect($("#att_phase"),          META.attempt_phases || ["During Contest", "Upsolve"], false);
+  const a = p.my_attempt || {};
+  $("#att_status").value          = a.attempt_status || "";
+  $("#att_problem_faced").value   = a.problem_faced  || "";
+  $("#att_phase").value           = a.attempt_phase  || "During Contest";
+  $("#att_time_spent_min").value  = a.time_spent_min ?? "";
+  $("#att_notes").value           = a.notes || "";
+  updateAcceptedHints();
+  $("#modal-bg-attempt").classList.add("show");
+}
+
+function updateAcceptedHints() {
+  const isAccepted = $("#att_status").value === "Accepted";
+  $("#att-accepted-hint").style.display = isAccepted ? "" : "none";
+  $("#att-time-req").style.display      = isAccepted ? "" : "none";
+  $("#att-notes-req").style.display     = isAccepted ? "" : "none";
+  // Phase is mandatory when status = Accepted — it powers the during/upsolved
+  // counts on the contest cards and the server enforces this.  Hidden for
+  // non-Accepted statuses to keep the form focused.
+  $("#att-phase-row").style.display     = isAccepted ? "" : "none";
+  $("#att-phase-req").style.display     = isAccepted ? "" : "none";
+}
+
+async function saveAttempt() {
+  const status = $("#att_status").value;
+  const time   = $("#att_time_spent_min").value;
+  const notes  = $("#att_notes").value.trim();
+  const phase  = $("#att_phase").value;
+  if (status === "Accepted" && (!time || !notes)) {
+    toast("Marking Accepted requires Time Spent and Notes.", "error");
+    return;
+  }
+  if (status === "Accepted" && !phase) {
+    toast("Marking Accepted requires picking when you solved it (During Contest / Upsolve).", "error");
+    return;
+  }
+  try {
+    await api(`/problems/${ATTEMPT_PROBLEM_ID}/attempt`, {
+      method: "PUT",
+      body: JSON.stringify({
+        attempt_status: status || null,
+        // Phase is only meaningful for Accepted; null it out otherwise so the
+        // DB doesn't carry a stale "During Contest" on a TLE/WA row.
+        attempt_phase:  status === "Accepted" ? (phase || null) : null,
+        problem_faced:  $("#att_problem_faced").value || null,
+        time_spent_min: time === "" ? null : Number(time),
+        notes:          notes || null,
+      }),
+    });
+    $("#modal-bg-attempt").classList.remove("show");
+    toast("Attempt saved", "success");
+    refreshProblems();
+    // If the user is on (or has loaded) the Assigned Contests tab, the
+    // during/upsolved counts on each card need to refresh too.
+    if (typeof refreshAssignedContests === "function") {
+      refreshAssignedContests().catch(() => {});
+    }
+  } catch (e) { toast(e.message, "error"); }
+}
+
+// ========================================================================
+// TEAMS
+// ========================================================================
+async function refreshTeams() {
+  const mine = $("#teams-mine").checked ? "?mine=1" : "";
+  TEAMS_CACHE = await api("/teams" + mine);
+  // also load contestants list for member dropdown (admin/coach only)
+  if (canWrite()) {
+    USERS_CACHE = await api("/users").catch(() => []);
+  }
+  renderTeams();
+}
+
+function renderTeams() {
+  const wrap = $("#teams-grid");
+  if (!TEAMS_CACHE.length) {
+    wrap.innerHTML = `<div class="empty" style="grid-column:1/-1"><h2>No teams yet</h2>${canWrite() ? "<p>Click <b>+ New Team</b> to create one.</p>" : ""}</div>`;
+    return;
+  }
+  wrap.innerHTML = TEAMS_CACHE.map(t => renderTeamCard(t)).join("");
+  $$(".team-card [data-action]").forEach(el => el.addEventListener("click", onTeamCardAction));
+}
+
+function renderTeamCard(t) {
+  const cap = META.team_caps || {member: 3, reserve: 1};
+  const memberSlots = Array.from({length: cap.member}).map((_, i) =>
+    `<span class="${i < t.member_count ? 'filled' : ''}"></span>`).join("");
+  const reserveSlots = Array.from({length: cap.reserve}).map((_, i) =>
+    `<span class="${i < t.reserve_count ? 'filled' : ''}"></span>`).join("");
+  const manage = canManage(t);
+  const candidates = (USERS_CACHE || []).filter(u =>
+    u.role === "Contestant" && !t.members.some(m => m.id === u.id)
+  );
+  const coachCandidates = (USERS_CACHE || []).filter(u =>
+    (u.role === "Coach" || u.role === "Admin") && !t.coaches.some(c => c.id === u.id)
+  );
+
+  return `
+    <div class="team-card" data-team-id="${t.id}">
+      <h3>
+        <a href="#" data-action="open-team" style="color:var(--accent);text-decoration:none">${escapeHtml(t.name)}</a>
+        ${manage ? `<span style="display:flex;gap:4px">
+          <button data-action="edit-team" class="ghost" title="Edit">✎</button>
+          ${isAdmin() ? `<button data-action="delete-team" class="danger" title="Delete">×</button>` : ""}
+        </span>` : ""}
+      </h3>
+      <div class="meta">${escapeHtml(t.institution || "")}${t.description ? " · " + escapeHtml(t.description) : ""}</div>
+
+      <div class="roster">
+        <h4>Members <span style="color:var(--muted);font-weight:400">${t.member_count}/${cap.member}</span></h4>
+        <div class="cap-bar">${memberSlots}</div>
+        ${t.members.filter(m => m.role_in_team === "Member").map(m => personRow(t, m, manage)).join("")}
+      </div>
+      <div class="roster">
+        <h4>Reserve <span style="color:var(--muted);font-weight:400">${t.reserve_count}/${cap.reserve}</span></h4>
+        <div class="cap-bar reserve">${reserveSlots}</div>
+        ${t.members.filter(m => m.role_in_team === "Reserve").map(m => personRow(t, m, manage)).join("")}
+      </div>
+
+      ${manage && (t.member_count < cap.member || t.reserve_count < cap.reserve) ? `
+        <div class="add-row">
+          <select data-action="member-select">
+            <option value="">+ add contestant…</option>
+            ${candidates.map(u => `<option value="${u.id}">${escapeHtml(u.name)} <${escapeHtml(u.email)}></option>`).join("")}
+          </select>
+          <select data-action="member-role">
+            ${t.member_count < cap.member ? `<option value="Member">Member</option>` : ""}
+            ${t.reserve_count < cap.reserve ? `<option value="Reserve">Reserve</option>` : ""}
+          </select>
+          <button data-action="add-member" class="primary">Add</button>
+        </div>` : ""}
+
+      <div class="roster">
+        <h4>Coaches</h4>
+        ${t.coaches.map(c => `
+          <div class="person">
+            <span class="name"><strong>${escapeHtml(c.name)}</strong> <span class="tag">${c.role}</span></span>
+            ${isAdmin() ? `<button class="x" data-action="remove-coach" data-uid="${c.id}" title="Remove">×</button>` : ""}
+          </div>
+        `).join("")}
+        ${isAdmin() && coachCandidates.length ? `
+          <div class="add-row" style="margin-top:8px">
+            <select data-action="coach-select">
+              <option value="">+ assign coach…</option>
+              ${coachCandidates.map(u => `<option value="${u.id}">${escapeHtml(u.name)} <${u.role}></option>`).join("")}
+            </select>
+            <button data-action="add-coach" class="primary">Assign</button>
+          </div>` : ""}
+      </div>
+    </div>`;
+}
+
+function personRow(team, m, canManage) {
+  return `
+    <div class="person">
+      <span class="name"><strong>${escapeHtml(m.name)}</strong>
+        ${m.handle ? `<span class="tag">${escapeHtml(m.handle)}</span>` : ""}
+      </span>
+      ${canManage ? `
+        <span style="display:flex;gap:6px">
+          <button class="x" data-action="toggle-role" data-uid="${m.id}" title="${m.role_in_team === 'Member' ? 'Move to Reserve' : 'Promote to Member'}">⇅</button>
+          <button class="x" data-action="remove-member" data-uid="${m.id}" title="Remove">×</button>
+        </span>` : ""}
+    </div>`;
+}
+
+async function onTeamCardAction(e) {
+  const card = e.currentTarget.closest(".team-card");
+  const tid  = parseInt(card.dataset.teamId, 10);
+  const action = e.currentTarget.dataset.action;
+  const team = TEAMS_CACHE.find(t => t.id === tid);
+
+  try {
+    if (action === "open-team") {
+      e.preventDefault();
+      openTeamDetail(tid);
+      return;
+    }
+    if (action === "delete-team") {
+      if (!confirm(`Delete team "${team.name}"? This cannot be undone.`)) return;
+      await api(`/teams/${tid}`, { method: "DELETE" });
+      toast("Team deleted", "success"); refreshTeams();
+    } else if (action === "edit-team") {
+      openTeamModal(team);
+    } else if (action === "add-member") {
+      const userId = card.querySelector('[data-action="member-select"]').value;
+      const role   = card.querySelector('[data-action="member-role"]').value;
+      if (!userId) return;
+      await api(`/teams/${tid}/members`, { method: "POST", body: JSON.stringify({ user_id: parseInt(userId,10), role_in_team: role })});
+      refreshTeams();
+    } else if (action === "remove-member") {
+      const uid = e.currentTarget.dataset.uid;
+      if (!confirm("Remove this member?")) return;
+      await api(`/teams/${tid}/members/${uid}`, { method: "DELETE" });
+      refreshTeams();
+    } else if (action === "toggle-role") {
+      const uid = parseInt(e.currentTarget.dataset.uid, 10);
+      const m = team.members.find(x => x.id === uid);
+      const newRole = m.role_in_team === "Member" ? "Reserve" : "Member";
+      await api(`/teams/${tid}/members/${uid}`, { method: "PATCH", body: JSON.stringify({ role_in_team: newRole })});
+      refreshTeams();
+    } else if (action === "add-coach") {
+      const userId = card.querySelector('[data-action="coach-select"]').value;
+      if (!userId) return;
+      await api(`/teams/${tid}/coaches`, { method: "POST", body: JSON.stringify({ user_id: parseInt(userId,10) })});
+      refreshTeams();
+    } else if (action === "remove-coach") {
+      const uid = e.currentTarget.dataset.uid;
+      if (!confirm("Remove this coach from the team?")) return;
+      await api(`/teams/${tid}/coaches/${uid}`, { method: "DELETE" });
+      refreshTeams();
+    }
+  } catch (err) { toast(err.message, "error"); }
+}
+
+function openTeamModal(team = null) {
+  $("#team-modal-title").textContent = team ? "Edit Team" : "New Team";
+  $("#tm_id").value = team ? team.id : "";
+  $("#tm_name").value = team ? team.name : "";
+  $("#tm_institution").value = team ? (team.institution || "") : "";
+  $("#tm_description").value = team ? (team.description || "") : "";
+  $("#modal-bg-team").classList.add("show");
+}
+
+async function saveTeam() {
+  const id = $("#tm_id").value;
+  const payload = {
+    name: $("#tm_name").value.trim(),
+    institution: $("#tm_institution").value.trim(),
+    description: $("#tm_description").value.trim(),
+  };
+  if (!payload.name) { toast("Team name required", "error"); return; }
+  try {
+    if (id) await api(`/teams/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    else    await api("/teams",        { method: "POST",  body: JSON.stringify(payload) });
+    $("#modal-bg-team").classList.remove("show");
+    toast(id ? "Updated" : "Created", "success");
+    refreshTeams();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+// ------------------------------------------------------------------------
+// Team detail (drilldown showing assigned problems with status breakdown)
+// ------------------------------------------------------------------------
+let TEAM_DETAIL_PROBLEMS = [];
+
+async function openTeamDetail(tid) {
+  $("#teams-grid-view").style.display = "none";
+  $("#team-detail-view").style.display = "";
+  $("#team-detail-name").textContent = "Loading…";
+  $("#team-detail-stats").textContent = "";
+  $("#team-detail-problems").innerHTML = "";
+  try {
+    const data = await api(`/teams/${tid}/problems`);
+    TEAM_DETAIL_PROBLEMS = data.results;
+    $("#team-detail-name").textContent = data.team.name;
+    $("#team-detail-stats").textContent = `${data.count} assigned problem${data.count === 1 ? "" : "s"}`;
+    renderTeamDetailProblems(data.results);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+function closeTeamDetail() {
+  $("#team-detail-view").style.display = "none";
+  $("#teams-grid-view").style.display = "";
+}
+
+function renderTeamDetailProblems(rows) {
+  const wrap = $("#team-detail-problems");
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty">No problems assigned to this team yet.</div>`;
+    return;
+  }
+  // Use coach-style rendering with the Solved column + click-to-expand.
+  // Stash to CURRENT_PROBLEMS so existing toggleCoachExpand can find them.
+  CURRENT_PROBLEMS = rows;
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Name</th><th>Platform / Contest</th><th>Rating</th><th>Difficulty</th><th>Topic</th>
+      <th>Tags</th><th>Imp.</th><th>Solved</th>
+    </tr></thead>
+    <tbody>${rows.map(r => coachRow(r).replace(/<td>\${canWrite\(\).*?<\/td>/, "")).join("")}</tbody>
+  </table>`;
+  // Re-render properly without the action cell
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Name</th><th>Platform / Contest</th><th>Rating</th><th>Difficulty</th><th>Topic</th>
+      <th>Tags</th><th>Imp.</th><th>Solved</th>
+    </tr></thead>
+    <tbody>${rows.map(r => `
+      <tr data-id="${r.id}" style="cursor:pointer">
+        <td><a href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHtml(r.name)}</a></td>
+        <td><div>${r.platform || ""}</div>
+            <div style="color:var(--muted);font-size:11px">${escapeHtml(r.contest_name || "")} ${r.contest_year ? "· " + r.contest_year : ""}</div></td>
+        <td>${r.rating ?? ""}</td>
+        <td>${r.difficulty || ""}</td>
+        <td><div>${r.topic || ""}</div>${r.sub_topic ? `<div style="color:var(--muted);font-size:11px">${escapeHtml(r.sub_topic)}</div>` : ""}</td>
+        <td>${(r.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</td>
+        <td>${r.importance ? `<span class="pill pill-${importancePillClass(r.importance)}">${r.importance}</span>` : ""}</td>
+        <td>${(r.team_summary || []).map(t =>
+          `<span class="pill pill-${t.solved >= t.total && t.total > 0 ? 'Done' : (t.solved > 0 ? 'InProgress' : 'Todo')}">${escapeHtml(t.team_name)} ${t.solved}/${t.total}</span>`
+        ).join(" ") || `<span style="color:var(--muted);font-size:12px">—</span>`}</td>
+      </tr>`).join("")}</tbody>
+  </table>`;
+  $$("#team-detail-problems tr[data-id]").forEach(tr => tr.addEventListener("click", (e) => {
+    if (e.target.closest("a,button")) return;
+    toggleCoachExpand(tr);
+  }));
+}
+
+// ------------------------------------------------------------------------
+// User detail (drilldown showing problems assigned to that user)
+// ------------------------------------------------------------------------
+async function openUserDetail(uid) {
+  $("#users-grid-view").style.display = "none";
+  $("#user-detail-view").style.display = "";
+  $("#user-detail-name").textContent = "Loading…";
+  $("#user-detail-stats").textContent = "";
+  $("#user-detail-problems").innerHTML = "";
+  try {
+    const data = await api(`/users/${uid}/problems`);
+    $("#user-detail-name").textContent = `${data.user.name} (${data.user.role})`;
+    $("#user-detail-stats").textContent = `${data.count} assigned problem${data.count === 1 ? "" : "s"}`;
+    renderUserDetailProblems(data.results);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+function closeUserDetail() {
+  $("#user-detail-view").style.display = "none";
+  $("#users-grid-view").style.display = "";
+}
+
+function renderUserDetailProblems(rows) {
+  const wrap = $("#user-detail-problems");
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty">No problems assigned to this user yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Name</th><th>Platform</th><th>Rating</th><th>Difficulty</th><th>Topic</th>
+      <th>Tags</th><th>Imp.</th>
+      <th>Status</th><th>Problem Faced</th><th>Time</th><th>Notes</th>
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const a = r.user_attempt || {};
+      const statusPill = a.attempt_status
+        ? `<span class="pill pill-${(a.attempt_status||'').replace(/\s/g,'')}">${a.attempt_status}</span>`
+        : `<span class="pill pill-Todo">TODO</span>`;
+      return `
+        <tr>
+          <td><a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
+          <td>${r.platform || ""}</td>
+          <td>${r.rating ?? ""}</td>
+          <td>${r.difficulty || ""}</td>
+          <td><div>${r.topic || ""}</div>${r.sub_topic ? `<div style="color:var(--muted);font-size:11px">${escapeHtml(r.sub_topic)}</div>` : ""}</td>
+          <td>${(r.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</td>
+          <td>${r.importance ? `<span class="pill pill-${importancePillClass(r.importance)}">${r.importance}</span>` : ""}</td>
+          <td>${statusPill}</td>
+          <td style="font-size:12px;color:var(--muted)">${escapeHtml(a.problem_faced || "")}</td>
+          <td>${a.time_spent_min != null ? a.time_spent_min + " min" : ""}</td>
+          <td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(a.notes || "")}">${escapeHtml(a.notes || "")}</td>
+        </tr>`;
+    }).join("")}</tbody>
+  </table>`;
+}
+
+// ========================================================================
+// PROBLEM BANK
+// ========================================================================
+let CURRENT_BANK_PROBLEMS = [];
+let CURRENT_CONTESTS      = [];
+
+function bankBuildQuery() {
+  const p = new URLSearchParams();
+  const map = {
+    platform: "bank-platform", topic: "bank-topic", difficulty: "bank-difficulty",
+    rating_min: "bank-rating-min", rating_max: "bank-rating-max",
+    sort: "bank-sort", order: "bank-order",
+  };
+  for (const [k, id] of Object.entries(map)) {
+    const v = $("#" + id).value; if (v) p.set(k, v);
+  }
+  const q = $("#bank-q").value.trim(); if (q) p.set("q", q);
+  return p.toString();
+}
+
+async function refreshBankProblems() {
+  if (!canWrite()) return;
+  // Populate bank filter dropdowns first time
+  if (!$("#bank-platform").options.length || $("#bank-platform").options.length === 1) {
+    fillSelect($("#bank-platform"),   META.platforms,    true, "All platforms");
+    fillSelect($("#bank-topic"),      META.topics,       true, "All topics");
+    fillSelect($("#bank-difficulty"), META.difficulties, true, "All difficulties");
+  }
+  const data = await api("/bank/problems?" + bankBuildQuery());
+  CURRENT_BANK_PROBLEMS = data.results;
+  renderBankProblems(data.results);
+  $("#bank-problems-stats").textContent = `${data.total} problem${data.total === 1 ? "" : "s"} in bank`;
+}
+
+function renderBankProblems(rows) {
+  const wrap = $("#bank-problems-wrap");
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty"><h2>Problem bank is empty</h2><p>Once you populate it (via scraping or manual import), problems will appear here ready to assign.</p></div>`;
+    return;
+  }
+  const sort  = $("#bank-sort").value;
+  const order = $("#bank-order").value;
+  const arrow = (col) => col === sort ? (order === "asc" ? " ↑" : " ↓") : "";
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th data-bank-sort="name">Name${arrow("name")}</th>
+        <th>Platform / Contest</th>
+        <th data-bank-sort="rating">Rating${arrow("rating")}</th>
+        <th data-bank-sort="difficulty">Difficulty${arrow("difficulty")}</th>
+        <th>Topic</th>
+        <th>Tags</th><th>Imp.</th>
+        <th>AI Tutorial</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows.map(r => `
+        <tr data-id="${r.id}">
+          <td><a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
+          <td><div>${r.platform || ""}</div>
+              <div style="color:var(--muted);font-size:11px">${escapeHtml(r.contest_name || "")} ${r.contest_year ? "· " + r.contest_year : ""}</div></td>
+          <td>${r.rating ?? ""}</td>
+          <td>${r.difficulty || ""}</td>
+          <td><div>${r.topic || ""}</div>${r.sub_topic ? `<div style="color:var(--muted);font-size:11px">${escapeHtml(r.sub_topic)}</div>` : ""}</td>
+          <td>${(r.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</td>
+          <td>${r.importance ? `<span class="pill pill-${importancePillClass(r.importance)}">${r.importance}</span>` : ""}</td>
+          <td><span class="ai-tut-cell" data-pid="${r.id}">…</span></td>
+          <td>
+            <div style="display:flex;gap:4px;justify-content:flex-end">
+              <button data-bank-assign="${r.id}" class="primary" style="padding:3px 8px;font-size:11px">Assign</button>
+              <button data-action="edit"   data-id="${r.id}" style="padding:3px 8px;font-size:11px">Edit</button>
+              <button data-action="delete" data-id="${r.id}" class="danger" style="padding:3px 8px;font-size:11px">Del</button>
+            </div>
+          </td>
+        </tr>`).join("")}</tbody>
+    </table>`;
+  // Populate AI Tutorial column lazily — one /status call per row
+  hydrateAITutorialCells($("#bank-problems-wrap"));
+  $$("#bank-problems-wrap [data-bank-assign]").forEach(b =>
+    b.addEventListener("click", () => openAssignModal({
+      kind: "problem",
+      id: parseInt(b.dataset.bankAssign, 10),
+      label: (CURRENT_BANK_PROBLEMS.find(p => p.id === parseInt(b.dataset.bankAssign,10)) || {}).name,
+    }))
+  );
+  $$("#bank-problems-wrap button[data-action='edit'], #bank-problems-wrap button[data-action='delete']")
+    .forEach(b => b.addEventListener("click", onBankRowAction));
+  $$("#bank-problems-wrap th[data-bank-sort]").forEach(th => th.addEventListener("click", () => {
+    const col = th.dataset.bankSort;
+    if ($("#bank-sort").value === col) {
+      $("#bank-order").value = $("#bank-order").value === "asc" ? "desc" : "asc";
+    } else {
+      $("#bank-sort").value = col;
+      $("#bank-order").value = "asc";
+    }
+    refreshBankProblems();
+  }));
+}
+
+// ========================================================================
+// ASSIGNED CONTESTS  (visible to every logged-in user)
+// ========================================================================
+let CURRENT_ASSIGNED_CONTESTS = [];
+
+async function refreshAssignedContests() {
+  try {
+    CURRENT_ASSIGNED_CONTESTS = await api("/contests/assigned");
+  } catch (e) {
+    CURRENT_ASSIGNED_CONTESTS = [];
+  }
+  renderAssignedContests();
+}
+
+function renderStars(score, max = 5) {
+  // Render a 0–max score as ★ glyphs, with a half-star (½) for .5 fractional.
+  // Returns "" for null/undefined so callers can plug it into a template safely.
+  if (score === null || score === undefined || isNaN(score)) return "";
+  const s = Math.max(0, Math.min(max, Number(score)));
+  const full = Math.floor(s);
+  const half = (s - full) >= 0.5 ? 1 : 0;
+  const empty = max - full - half;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(empty);
+}
+
+function difficultyBadges(c) {
+  // Return inline HTML showing whichever difficulty signals exist for this
+  // contest: CF stars (from average problem rating) and UCup stars (community vote).
+  const out = [];
+  if (c.cf_stars !== null && c.cf_stars !== undefined) {
+    out.push(
+      `<span class="pill pill-Hard" title="Codeforces avg-rating difficulty (${c.cf_stars.toFixed(1)} / 5)" `
+      + `style="background:rgba(124,93,250,0.15);color:#b9a7ff;border:1px solid rgba(124,93,250,0.4)">`
+      + `CF ${renderStars(c.cf_stars)}</span>`
+    );
+  }
+  if (c.ucup_stars !== null && c.ucup_stars !== undefined) {
+    out.push(
+      `<span class="pill pill-Hard" title="Universal Cup community score (${c.ucup_stars.toFixed(1)} / 5)" `
+      + `style="background:rgba(255,176,46,0.15);color:#ffcb74;border:1px solid rgba(255,176,46,0.4)">`
+      + `UCup ${renderStars(c.ucup_stars)}</span>`
+    );
+  }
+  return out.join(" ");
+}
+
+function tutorialLinks(c) {
+  // Build a small line of clickable links for the local tutorial artefacts
+  // (PDF + optional English markdown).  These were `file://` URLs originally,
+  // but every modern browser blocks file:// from an http:// page, so we serve
+  // them through Flask's /files/<path> route instead — same origin, no block.
+  const enc = (p) => "/files/" + p.split("/").map(encodeURIComponent).join("/");
+  const out = [];
+  if (c.tutorial_pdf) {
+    out.push(`<a href="${enc(c.tutorial_pdf)}" target="_blank" style="color:var(--accent)">📄 Tutorial${c.tutorial_lang ? " (" + c.tutorial_lang + ")" : ""}</a>`);
+  }
+  if (c.tutorial_translated) {
+    out.push(`<a href="${enc(c.tutorial_translated)}" target="_blank" style="color:var(--accent)">📄 Tutorial (English)</a>`);
+  }
+  if (!out.length && !c.tutorial_pdf) {
+    // Fall back to the UCup attachment URL when no local PDF was downloaded.
+    const m = (c.url || "").match(/contest\.ucup\.ac\/contest\/(\d+)/);
+    if (m) out.push(`<a href="https://contest.ucup.ac/download.php?type=attachments&id=${m[1]}&r=1" target="_blank" style="color:var(--accent)">📄 Tutorial (UCup)</a>`);
+  }
+  return out.join(" · ");
+}
+
+function renderAssignedContests() {
+  const wrap = $("#assigned-contests-grid");
+  $("#assigned-contests-stats").textContent =
+    `${CURRENT_ASSIGNED_CONTESTS.length} contest${CURRENT_ASSIGNED_CONTESTS.length === 1 ? "" : "s"}`;
+  if (!CURRENT_ASSIGNED_CONTESTS.length) {
+    wrap.innerHTML = `<div class="empty" style="grid-column:1/-1"><h2>No contests assigned yet</h2>
+      <p>${canWrite() ? "Open the <b>Contest Bank</b> tab and click <b>Assign contest</b> on any contest." : "Wait for a coach to assign one."}</p></div>`;
+    return;
+  }
+  wrap.innerHTML = CURRENT_ASSIGNED_CONTESTS.map(c => {
+    const total   = c.problem_count || 0;
+    const during  = c.during_count   || 0;
+    const upsolve = c.upsolve_count  || 0;
+    const unphased = c.unphased_solved || 0;
+    const solved  = c.my_solved || (during + upsolve + unphased);
+
+    // Top-line ratio: solved / total.
+    const ratio = total ? `${solved}/${total}` : "0/0";
+    const ratioClass = (solved >= total && total > 0) ? "Done"
+                     : (solved > 0)                   ? "InProgress"
+                     :                                  "Todo";
+
+    // Phase breakdown chips — only show the ones with non-zero counts so the
+    // card stays tidy.  Anchor the during count visually as the headline number.
+    const phaseChips = [];
+    if (during)   phaseChips.push(`<span class="pill pill-Done"   title="Solved within the simulated 5h contest window">${during} during</span>`);
+    if (upsolve)  phaseChips.push(`<span class="pill pill-Member" title="Solved later, while upsolving">${upsolve} upsolved</span>`);
+    // Note: legacy Accepted attempts without a phase are intentionally NOT
+    // shown as a chip — the phase field is now mandatory at the server, so
+    // any new Accepted will fall into one of the two buckets above.
+
+    const tut = tutorialLinks(c);
+    const targets = [
+      ...(c.assigned_users || []).map(u => `<span class="pill pill-Medium">${escapeHtml(u.name)}</span>`),
+      ...(c.assigned_teams || []).map(t => `<span class="pill pill-Member">${escapeHtml(t.name)}</span>`),
+    ].join(" ");
+    return `
+      <div class="team-card" data-assigned-contest-id="${c.id}">
+        <h3>
+          <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <a href="${c.url || "#"}" target="_blank" rel="noopener" style="color:var(--accent)">${escapeHtml(c.name)}</a>
+            ${c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;text-decoration:none">↗</a>` : ""}
+          </span>
+          <span class="pill pill-${ratioClass}">${ratio} solved</span>
+        </h3>
+        <div class="meta">
+          ${c.platform || "—"}${c.contest_type ? " · " + escapeHtml(c.contest_type) : ""}${c.contest_year ? " · " + c.contest_year : ""}
+        </div>
+        ${phaseChips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px">${phaseChips.join(" ")}</div>` : ""}
+        ${tut ? `<div class="meta" style="margin-bottom:8px">${tut}</div>` : ""}
+        ${targets ? `<div class="meta" style="margin-bottom:8px">Assigned to: ${targets}</div>` : ""}
+        <div class="meta" style="margin-bottom:8px">
+          <span class="ai-tut-contest-summary" data-cid="${c.id}">💡 …</span>
+        </div>
+        <div class="footer" style="flex-wrap:wrap;gap:6px">
+          <button data-assigned-contest-action="open">Show problems</button>
+          <button data-assigned-contest-action="ai-generate" data-cid="${c.id}" title="Start AI tutorial generation for every problem in this contest that doesn't have one yet">💡 Generate AI tutorials</button>
+        </div>
+        <div class="assigned-contest-problems contest-problems"></div>
+      </div>`;
+  }).join("");
+
+  // Wire the per-card "Show problems" buttons.
+  wrap.querySelectorAll('[data-assigned-contest-action="open"]')
+    .forEach(b => b.addEventListener("click", onAssignedContestOpen));
+  // Wire the per-card "Generate AI tutorials" buttons.
+  wrap.querySelectorAll('[data-assigned-contest-action="ai-generate"]')
+    .forEach(b => b.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const cid = parseInt(b.dataset.cid, 10);
+      const card = b.closest(".team-card");
+      const contest = CURRENT_ASSIGNED_CONTESTS.find(c => c.id === cid) || {};
+      await onContestGenerateAITutorial(card, cid, contest);
+    }));
+  // Hydrate the AI tutorial summary badges on each card.
+  hydrateContestAITutorialSummary();
+}
+
+async function onAssignedContestOpen(e) {
+  const card = e.currentTarget.closest(".team-card");
+  const cid  = parseInt(card.dataset.assignedContestId, 10);
+  const wrap = card.querySelector(".assigned-contest-problems");
+  if (wrap.classList.contains("open")) {   // toggle
+    wrap.classList.remove("open");
+    e.currentTarget.textContent = "Show problems";
+    return;
+  }
+  e.currentTarget.textContent = "Loading…";
+  try {
+    const detail = await api(`/bank/contests/${cid}`);
+    const problems = detail.problems || [];
+    if (!problems.length) {
+      wrap.innerHTML = `<div class="inner"><div class="empty-state">No problems registered for this contest yet.</div></div>`;
+    } else {
+      wrap.innerHTML = `<div class="inner">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Status</th><th>Phase</th><th>AI Tutorial</th><th></th></tr></thead>
+          <tbody>${problems.map((p, ix) => {
+            const a = p.my_attempt || {};
+            const statusPill = a.attempt_status
+              ? `<span class="pill pill-${(a.attempt_status||'').replace(/\s/g,'')}">${a.attempt_status}</span>`
+              : `<span class="pill pill-Todo">TODO</span>`;
+            const phaseChip = a.attempt_phase
+              ? `<span class="pill pill-${a.attempt_phase === "During Contest" ? "Done" : "Member"}">${a.attempt_phase}</span>`
+              : `<span style="color:var(--muted);font-size:12px">—</span>`;
+            const link = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="color:var(--accent)">${escapeHtml(p.name)}</a>` : escapeHtml(p.name);
+            return `<tr>
+              <td>${ix + 1}</td>
+              <td>${link}</td>
+              <td>${statusPill}</td>
+              <td>${phaseChip}</td>
+              <td><span class="ai-tut-cell" data-pid="${p.id}">…</span></td>
+              <td><button data-attempt-pid="${p.id}" class="primary">Update attempt</button></td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table></div>`;
+      // Hydrate the AI Tutorial cells just rendered into this expanded table.
+      hydrateAITutorialCells(wrap);
+      // We need CURRENT_PROBLEMS to be populated for openAttemptModal — patch
+      // it minimally so the modal can find this row when the user clicks.
+      CURRENT_PROBLEMS = problems;
+      wrap.querySelectorAll('[data-attempt-pid]').forEach(b =>
+        b.addEventListener("click", ev => openAttemptModal(parseInt(ev.currentTarget.dataset.attemptPid, 10)))
+      );
+    }
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    e.currentTarget.textContent = "Hide problems";
+  } catch (err) {
+    toast(err.message || "Failed to load contest", "error");
+    e.currentTarget.textContent = "Show problems";
+  }
+}
+
+// ========================================================================
+// CONTEST BANK
+// ========================================================================
+async function refreshContests() {
+  if (!canWrite()) return;
+  const q = $("#contest-q").value.trim();
+  CURRENT_CONTESTS = await api("/bank/contests" + (q ? "?q=" + encodeURIComponent(q) : ""));
+  // Pre-load each contest's problems so cards can be expanded inline
+  for (const c of CURRENT_CONTESTS) c._loaded = false;
+  renderContests();
+}
+
+function renderContests() {
+  const wrap = $("#contests-grid");
+  if (!CURRENT_CONTESTS.length) {
+    wrap.innerHTML = `<div class="empty" style="grid-column:1/-1"><h2>No contests yet</h2><p>Click <b>+ New Contest</b> to create one.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = CURRENT_CONTESTS.map(c => contestCard(c)).join("");
+  hydrateContestAITutorialSummary();
+  $$(".team-card [data-contest-action]").forEach(el => el.addEventListener("click", onContestCardAction));
+}
+
+function contestCard(c) {
+  const remain = c.bank_problem_count;
+  const total  = c.problem_count;
+  const tut = tutorialLinks(c);
+  const stars = difficultyBadges(c);
+  return `
+    <div class="team-card" data-contest-id="${c.id}">
+      <h3>
+        <span>${escapeHtml(c.name)}</span>
+        <span style="display:flex;gap:4px">
+          ${isAdmin() ? `<button data-contest-action="delete" class="danger" title="Delete">×</button>` : ""}
+        </span>
+      </h3>
+      <div class="meta">
+        ${escapeHtml(c.platform || "—")}${c.contest_type ? " · " + escapeHtml(c.contest_type) : ""}${c.contest_year ? " · " + c.contest_year : ""}
+      </div>
+      ${stars ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px">${stars}</div>` : ""}
+      ${tut ? `<div class="meta" style="margin-bottom:8px">${tut}</div>` : ""}
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span class="pill pill-${remain ? 'Todo' : 'Done'}">${total} problem${total === 1 ? '' : 's'}</span>
+        <span class="ai-tut-contest-summary" data-cid="${c.id}" style="font-size:11px;color:var(--muted)">💡 …</span>
+      </div>
+      <div class="footer" style="flex-wrap:wrap;gap:6px">
+        <button data-contest-action="open">Open</button>
+        ${c.url ? `<a class="btn" href="${escapeHtml(c.url)}" target="_blank" rel="noopener" style="text-decoration:none">Go to contest ↗</a>` : ""}
+        ${total ? `<button data-contest-action="assign" class="primary">Assign contest</button>` : ""}
+        ${total && canWrite() ? `<button data-contest-action="ai-generate" title="Generate AI tutorial for every problem in this contest">💡 Generate AI tutorials</button>` : ""}
+      </div>
+      <div class="contest-problems"></div>
+    </div>`;
+}
+
+async function onContestCardAction(e) {
+  const card = e.currentTarget.closest(".team-card");
+  const cid  = parseInt(card.dataset.contestId, 10);
+  const action = e.currentTarget.dataset.contestAction;
+  const contest = CURRENT_CONTESTS.find(c => c.id === cid);
+
+  try {
+    if (action === "delete") {
+      if (!confirm(`Delete contest "${contest.name}"? Its problems will NOT be deleted.`)) return;
+      await api(`/bank/contests/${cid}`, { method: "DELETE" });
+      toast("Contest deleted", "success"); refreshContests();
+    } else if (action === "assign") {
+      openAssignModal({
+        kind: "contest", id: cid, label: contest.name + ` (${contest.problem_count} problems)`
+      });
+    } else if (action === "ai-generate") {
+      await onContestGenerateAITutorial(card, cid, contest);
+      return;
+    } else if (action === "open") {
+      const wrap = card.querySelector(".contest-problems");
+      if (wrap.classList.contains("open")) { wrap.classList.remove("open"); return; }
+      const detail = await api(`/bank/contests/${cid}`);
+      const problems = detail.problems || [];
+      wrap.innerHTML = `<div class="inner">` + (problems.length ? `
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Platform</th><th>Rating</th><th>Topic</th><th>Assigned to</th><th>Tutorial</th><th></th></tr></thead>
+          <tbody>${problems.map((p, ix) => {
+            const assignees = [];
+            (p.assigned_users || []).forEach(u => assignees.push(`<span class="pill pill-Medium">${escapeHtml(u.name)}</span>`));
+            (p.assigned_teams || []).forEach(t => assignees.push(`<span class="pill pill-Member">${escapeHtml(t.name)}</span>`));
+            const cell = assignees.length ? assignees.join(" ") : `<span style="color:var(--muted);font-size:11px">— not assigned —</span>`;
+            return `
+              <tr>
+                <td>${String.fromCharCode(65 + ix)}</td>
+                <td><a href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a></td>
+                <td>${p.platform || ""}</td>
+                <td>${p.rating ?? ""}</td>
+                <td>${p.topic || ""}</td>
+                <td>${cell}</td>
+                <td><span class="ai-tut-cell" data-pid="${p.id}">…</span></td>
+                <td>
+                  <div style="display:flex;gap:4px">
+                    <button data-action="cp-assign" data-pid="${p.id}" data-pname="${escapeHtml(p.name)}" class="primary" style="padding:3px 8px;font-size:11px">Assign</button>
+                    <button data-action="cp-rm" data-cid="${cid}" data-pid="${p.id}" class="danger" style="padding:3px 8px;font-size:11px">Remove</button>
+                  </div>
+                </td>
+              </tr>`;
+          }).join("")}</tbody>
+        </table>` : `<div class="empty-state">No problems in this contest yet.</div>`) + `</div>`;
+      // Hydrate per-problem AI Tutorial cells (View / Generate / Generating buttons)
+      hydrateAITutorialCells(wrap);
+      // Trigger the slide-down on the next frame so the transition runs
+      requestAnimationFrame(() => wrap.classList.add("open"));
+      wrap.querySelectorAll("[data-action='cp-rm']").forEach(b => b.addEventListener("click", async () => {
+        if (!confirm("Remove this problem from the contest?")) return;
+        await api(`/bank/contests/${b.dataset.cid}/problems/${b.dataset.pid}`, { method: "DELETE" });
+        // Re-open the card to refresh
+        e.currentTarget.dispatchEvent(new Event("click", {bubbles:true}));
+      }));
+      wrap.querySelectorAll("[data-action='cp-assign']").forEach(b => b.addEventListener("click", () => {
+        openAssignModal({
+          kind: "problem",
+          id:   parseInt(b.dataset.pid, 10),
+          label: b.dataset.pname,
+        });
+      }));
+    }
+  } catch (err) { toast(err.message, "error"); }
+}
+
+// ---- Contest create modal ----
+function openContestModal(contest = null) {
+  $("#contest-modal-title").textContent = contest ? "Edit Contest" : "New Contest";
+  $("#cm_id").value           = contest ? contest.id : "";
+  $("#cm_name").value         = contest ? contest.name : "";
+  $("#cm_platform").value     = contest ? (contest.platform     || "") : "";
+  $("#cm_contest_type").value = contest ? (contest.contest_type || "") : "";
+  $("#cm_contest_year").value = contest ? (contest.contest_year ?? "") : "";
+  $("#cm_url").value          = contest ? (contest.url          || "") : "";
+  $("#cm_notes").value        = contest ? (contest.notes        || "") : "";
+  // Populate platform / contest type lists once
+  fillSelect($("#cm_platform"),     META.platforms,     true);
+  fillSelect($("#cm_contest_type"), META.contest_types, true);
+  if (contest) {
+    $("#cm_platform").value     = contest.platform     || "";
+    $("#cm_contest_type").value = contest.contest_type || "";
+  }
+  $("#modal-bg-contest").classList.add("show");
+}
+
+async function saveContest() {
+  const id = $("#cm_id").value;
+  const payload = {
+    name:         $("#cm_name").value.trim(),
+    platform:     $("#cm_platform").value,
+    contest_type: $("#cm_contest_type").value,
+    contest_year: $("#cm_contest_year").value || null,
+    url:          $("#cm_url").value.trim(),
+    notes:        $("#cm_notes").value.trim(),
+  };
+  if (!payload.name) { toast("Contest name required", "error"); return; }
+  try {
+    if (id) await api(`/bank/contests/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    else    await api("/bank/contests",        { method: "POST",  body: JSON.stringify(payload) });
+    $("#modal-bg-contest").classList.remove("show");
+    toast(id ? "Updated" : "Created", "success");
+    refreshContests();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+// ========================================================================
+// Generic Bank Assign modal (problem or contest)
+// ========================================================================
+let ASSIGN_TARGET = null;            // {kind:'problem'|'contest', id, label}
+let ASSIGN_USERS  = [];
+let ASSIGN_TEAMS  = [];
+
+const bankUserMS = buildMultiSelect({
+  mountId: "ms-bank-users", inputId: "ms-bank-users-input",
+  dropdownId: "ms-bank-users-dropdown", chipsId: "ms-bank-users-chips",
+  getSel: () => ASSIGN_USERS, setSel: (a) => { ASSIGN_USERS = a; },
+  options: () => ASSIGN_OPTIONS.users || [],
+  filter: (u, f) => !f || (u.name||"").toLowerCase().includes(f) ||
+                       (u.email||"").toLowerCase().includes(f) ||
+                       (u.role||"").toLowerCase().includes(f),
+  render: (u) => `<div class="ms-item" data-id="${u.id}">
+                    <span>${escapeHtml(u.name)} <span class="tag">${u.role||""}</span></span>
+                    <span class="meta">${escapeHtml(u.email || "")}</span>
+                  </div>`,
+});
+const bankTeamMS = buildMultiSelect({
+  mountId: "ms-bank-teams", inputId: "ms-bank-teams-input",
+  dropdownId: "ms-bank-teams-dropdown", chipsId: "ms-bank-teams-chips",
+  getSel: () => ASSIGN_TEAMS, setSel: (a) => { ASSIGN_TEAMS = a; },
+  options: () => ASSIGN_OPTIONS.teams || [],
+  filter: (t, f) => !f || (t.name||"").toLowerCase().includes(f) ||
+                       (t.institution||"").toLowerCase().includes(f),
+  render: (t) => `<div class="ms-item" data-id="${t.id}">
+                    <span><strong>${escapeHtml(t.name)}</strong></span>
+                    <span class="meta">${escapeHtml(t.institution || "")}</span>
+                  </div>`,
+});
+
+function openAssignModal(target) {
+  ASSIGN_TARGET = target;
+  ASSIGN_USERS = [];
+  ASSIGN_TEAMS = [];
+  bankUserMS.renderChips();
+  bankTeamMS.renderChips();
+  $("#assign-modal-title").textContent =
+    target.kind === "contest" ? "Assign contest" : "Assign problem from bank";
+  $("#assign-target-info").textContent = target.label || "";
+  $("#assign-modal-hint").textContent  = target.kind === "contest"
+    ? "Every problem in this contest gets assigned to the chosen users/teams, and the contest itself shows up in their Assigned Contests tab."
+    : "Pick at least one user or team. The problem will move out of the bank into your Problems tab.";
+  loadAssignmentOptions();   // refresh user + team lists
+  $("#modal-bg-assign").classList.add("show");
+}
+
+async function saveAssign() {
+  if (!ASSIGN_TARGET) return;
+  if (!ASSIGN_USERS.length && !ASSIGN_TEAMS.length) {
+    toast("Pick at least one user or team", "error"); return;
+  }
+  try {
+    const path = ASSIGN_TARGET.kind === "contest"
+      ? `/bank/contests/${ASSIGN_TARGET.id}/assign`
+      : `/bank/problems/${ASSIGN_TARGET.id}/assign`;
+    await api(path, {
+      method: "POST",
+      body: JSON.stringify({
+        assigned_user_ids: ASSIGN_USERS.map(u => u.id),
+        assigned_team_ids: ASSIGN_TEAMS.map(t => t.id),
+      }),
+    });
+    $("#modal-bg-assign").classList.remove("show");
+    toast(ASSIGN_TARGET.kind === "contest" ? "Contest assigned" : "Problem assigned", "success");
+    if (ASSIGN_TARGET.kind === "contest") refreshContests(); else refreshBankProblems();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+// ========================================================================
+// USERS
+// ========================================================================
+async function refreshUsers() {
+  const p = new URLSearchParams();
+  if ($("#users-q").value.trim()) p.set("q", $("#users-q").value.trim());
+  if ($("#users-role").value)     p.set("role", $("#users-role").value);
+  USERS_CACHE = await api("/users?" + p.toString());
+  renderUsers();
+}
+
+function renderUsers() {
+  const wrap = $("#users-table-wrap");
+  if (!USERS_CACHE.length) { wrap.innerHTML = `<div class="empty">No users found.</div>`; return; }
+  wrap.innerHTML = `
+    <table><thead><tr>
+      <th>Name</th><th>Email</th><th>Role</th><th>Handle</th><th>Institution</th><th>Status</th><th>Joined</th><th></th>
+    </tr></thead>
+    <tbody>${USERS_CACHE.map(u => `
+      <tr data-uid="${u.id}">
+        <td><a href="#" data-action="open-user" data-uid="${u.id}" style="color:var(--accent);text-decoration:none"><strong>${escapeHtml(u.name)}</strong></a></td>
+        <td>${escapeHtml(u.email)}</td>
+        <td><span class="pill pill-${u.role}">${u.role}</span></td>
+        <td>${escapeHtml(u.handle || "")}</td>
+        <td>${escapeHtml(u.institution || "")}</td>
+        <td>${u.is_active ? `<span class="pill pill-Done">Active</span>` : `<span class="pill pill-Skipped">Disabled</span>`}</td>
+        <td style="color:var(--muted);font-size:11px">${(u.date_joined || "").slice(0,10)}</td>
+        <td>${isAdmin() && u.id !== ME.id ? `<div class="row-actions">
+            <select data-action="set-role" data-uid="${u.id}" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:11px">
+              ${["Admin","Coach","Contestant"].map(r => `<option value="${r}" ${r===u.role?'selected':''}>${r}</option>`).join("")}
+            </select>
+            <button data-action="toggle-active" data-uid="${u.id}" class="${u.is_active?'danger':''}">${u.is_active?'Disable':'Enable'}</button>
+          </div>` : ""}</td>
+      </tr>`).join("")}</tbody></table>`;
+  $$("#users-table-wrap [data-action]").forEach(el => {
+    if (el.dataset.action === "open-user") {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        openUserDetail(parseInt(el.dataset.uid, 10));
+      });
+    } else if (el.tagName === "SELECT") {
+      el.addEventListener("change", onUserAction);
+    } else {
+      el.addEventListener("click", onUserAction);
+    }
+  });
+}
+
+async function onUserAction(e) {
+  const action = e.currentTarget.dataset.action;
+  const uid = e.currentTarget.dataset.uid;
+  try {
+    if (action === "set-role") {
+      const role = e.currentTarget.value;
+      await api(`/users/${uid}`, { method: "PATCH", body: JSON.stringify({ role }) });
+      toast("Role updated", "success"); refreshUsers();
+    } else if (action === "toggle-active") {
+      const u = USERS_CACHE.find(x => x.id == uid);
+      await api(`/users/${uid}`, { method: "PATCH", body: JSON.stringify({ is_active: !u.is_active }) });
+      refreshUsers();
+    }
+  } catch (err) { toast(err.message, "error"); }
+}
+
+async function createUser() {
+  const payload = {
+    name:        $("#us_name").value.trim(),
+    email:       $("#us_email").value.trim(),
+    password:    $("#us_password").value,
+    role:        $("#us_role").value,
+    handle:      $("#us_handle").value.trim(),
+    institution: $("#us_institution").value.trim(),
+  };
+  if (!payload.name || !payload.email || !payload.password) { toast("Name, email and password required", "error"); return; }
+  try {
+    await api("/users", { method: "POST", body: JSON.stringify(payload) });
+    $("#modal-bg-user").classList.remove("show");
+    ["us_name","us_email","us_password","us_handle","us_institution"].forEach(id => $("#"+id).value = "");
+    toast("User created", "success");
+    refreshUsers();
+  } catch (e) { toast(e.message, "error"); }
+}
+</script>
+
+<!-- ============== AI Tutorial modals ============== -->
+
+<!-- Coach/Admin: pick audience -->
+<div class="modal-bg" id="modal-bg-ai-tutorial-pick" style="display:none">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2 id="ai-tutorial-pick-title">💡 AI Tutorial</h2>
+      <button onclick="closeAITutorialPick()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);margin-top:0">Choose which version to view.</p>
+      <div id="ai-tutorial-pick-summary" style="background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:8px 0;font-size:13px;color:var(--muted);line-height:1.5"></div>
+      <div style="display:flex;gap:10px;flex-direction:column;margin-top:14px">
+        <button class="primary" id="ai-pick-student"
+                style="text-align:left;padding:14px 16px;font-size:14px;line-height:1.4">
+          <div><strong>👤 Contestant version</strong></div>
+          <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-top:4px;font-weight:400">
+            Socratic — hints, answers, and full solution hidden behind reveal blocks. Same view your team sees when they click "AI Coach".
+          </div>
+        </button>
+        <button class="primary" id="ai-pick-teacher"
+                style="text-align:left;padding:14px 16px;font-size:14px;line-height:1.4">
+          <div><strong>🧑‍🏫 Coach version</strong></div>
+          <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-top:4px;font-weight:400">
+            Everything visible inline. Includes "At a glance" callout, 35-min session plan, and editorial-decisions log.
+          </div>
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeAITutorialPick()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contestant: time-spent gate -->
+<div class="modal-bg" id="modal-bg-ai-tutorial-gate" style="display:none">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2>💡 AI Coach</h2>
+      <button onclick="closeAITutorialGate()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-top:0;line-height:1.55">
+        Have you spent enough time thinking about this problem on your own?
+        Reading the AI tutorial too early shortcuts the learning — the Socratic ladder
+        only works if you've genuinely tried each rung yourself first.
+      </p>
+      <div id="ai-tutorial-gate-recommendation"
+           style="background:var(--panel-2);border-left:3px solid var(--amber);
+                  padding:10px 14px;margin:14px 0;border-radius:4px;font-size:13px"></div>
+      <p style="color:var(--muted);font-size:13px">
+        Click "Yes, open the tutorial" to confirm. After this you can re-open the tutorial
+        any time without seeing this prompt.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeAITutorialGate()">Not yet</button>
+      <button class="primary" id="ai-gate-confirm">Yes, open the tutorial</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// AI Tutorial flow
+// ============================================================
+
+let _aiTutorialCurrent = { problemId: null, status: null };
+
+async function openAITutorialFlow(problemId) {
+  _aiTutorialCurrent.problemId = problemId;
+  let s;
+  try {
+    s = await api(`/problems/${problemId}/tutorial/status`);
+  } catch (e) {
+    toast("Could not load tutorial status: " + (e.message || "error"), "error");
+    return;
+  }
+  _aiTutorialCurrent.status = s;
+
+  if (!s.tutorial_exists) {
+    // No tutorial yet — offer the user to start generation. Mirrors the
+    // ai-tut-cell flow so the same prompt is used everywhere.
+    const status = s.tutorial_status;
+    if (status === "queued" || status === "generating") {
+      toast(`AI tutorial generation in progress for this problem. Watch the AI Tutorial column.`, "");
+    } else {
+      const ok = confirm(`No AI tutorial exists for this problem yet.\n\nStart generating one now? (5–10 minutes per problem.)`);
+      if (ok) {
+        try {
+          const r = await api(`/problems/${problemId}/tutorial/generate`, { method: "POST" });
+          toast(r.message || "Generation started.", "success");
+        } catch (e) {
+          toast("Could not start generation: " + (e.message || "error"), "error");
+        }
+      }
+    }
+    return;
+  }
+
+  if (!s.is_contestant) {
+    showAITutorialPick(s);
+  } else if (s.unlocked) {
+    openAITutorialView(problemId, "student");
+  } else {
+    showAITutorialGate(s);
+  }
+}
+
+// --- Coach/Admin: audience picker ---
+function showAITutorialPick(s) {
+  $("#ai-tutorial-pick-title").innerHTML = `💡 AI Tutorial`;
+  const summary = `
+    <div><strong>Key insight:</strong> ${escapeHtml((s.key_insight || "").slice(0, 200))}${s.key_insight && s.key_insight.length > 200 ? '…' : ''}</div>
+    <div style="margin-top:6px"><strong>${s.rung_count ?? '?'}</strong> Socratic rungs · <strong>${s.mcq_count ?? '?'}</strong> MCQs · <strong>${s.snippet_count ?? '?'}</strong> code snippets</div>
+    <div style="margin-top:6px;color:var(--muted)">Generated ${escapeHtml((s.generated_at || '').replace('T',' ').replace('Z',' UTC'))}</div>`;
+  $("#ai-tutorial-pick-summary").innerHTML = summary;
+  $("#ai-pick-student").onclick = () => { closeAITutorialPick(); openAITutorialView(s.problem_id, "student"); };
+  $("#ai-pick-teacher").onclick = () => { closeAITutorialPick(); openAITutorialView(s.problem_id, "teacher"); };
+  $("#modal-bg-ai-tutorial-pick").style.display = "flex";
+}
+function closeAITutorialPick() { $("#modal-bg-ai-tutorial-pick").style.display = "none"; }
+
+// --- Contestant: time-spent gate ---
+function showAITutorialGate(s) {
+  const labels = {
+    "Easy": "an Easy problem (15 min)",
+    "Normal": "a Normal problem (25 min)",
+    "Normal-Hard": "a Normal-Hard problem (45 min)",
+    "Hard": "a Hard problem (60 min)",
+    "Very Hard": "a Very Hard problem (75 min)",
+    "Challenge": "a Challenge problem (90 min)",
+  };
+  const label = labels[s.difficulty] || `${s.difficulty || 'this'} (${s.time_threshold_minutes} min)`;
+  $("#ai-tutorial-gate-recommendation").innerHTML =
+    `<strong>Recommended minimum:</strong> at least <strong>${s.time_threshold_minutes} minutes</strong> for ${label}. ` +
+    `If you've worked through it that long, you've earned the tutorial.`;
+  $("#ai-gate-confirm").onclick = async () => {
+    try {
+      await api(`/problems/${s.problem_id}/tutorial/unlock`, {
+        method: "POST",
+        body: JSON.stringify({ confirm: true, claimed_minutes: s.time_threshold_minutes })
+      });
+      closeAITutorialGate();
+      openAITutorialView(s.problem_id, "student");
+    } catch (e) {
+      toast("Could not unlock: " + (e.message || "error"), "error");
+    }
+  };
+  $("#modal-bg-ai-tutorial-gate").style.display = "flex";
+}
+function closeAITutorialGate() { $("#modal-bg-ai-tutorial-gate").style.display = "none"; }
+
+// --- Open the tutorial in a new tab ---
+function openAITutorialView(problemId, audience) {
+  const url = `/api/problems/${problemId}/tutorial?audience=${encodeURIComponent(audience)}`;
+  window.open(url, "_blank", "noopener");
+}
+
+
+// ============================================================
+// AI Tutorial — bank-table cell hydration + generate-and-poll
+// ============================================================
+
+const _aiCellRenderers = {
+  // For contestants who haven't unlocked, the View button shows as "AI Coach" so
+  // they still get the time-gate prompt. For unlocked users (and staff) it's "View".
+  done:        (pid, s) => {
+    const label = (s && s.is_contestant && !s.unlocked) ? "💡 AI Coach" : "💡 View";
+    return `<button class="primary" data-action="ai-tutorial" data-id="${pid}" style="padding:3px 8px;font-size:11px">${label}</button>`;
+  },
+  generating:  (pid) => `<span style="font-size:11px;color:var(--accent)">⏳ Generating…</span>`,
+  queued:      (pid) => `<span style="font-size:11px;color:var(--muted)">queued…</span>`,
+  failed:      (pid, err) => `<button class="danger" data-action="ai-generate" data-id="${pid}" style="padding:3px 8px;font-size:11px" title="${escapeHtml(typeof err === "string" ? err : (err && err.error_message) || "")}">⚠ Retry</button>`,
+  // Generate is available to every logged-in user (server-side env var can lock to staff)
+  missing:     (pid) => `<button data-action="ai-generate" data-id="${pid}" style="padding:3px 8px;font-size:11px">💡 Generate</button>`,
+};
+
+async function hydrateAITutorialCells(scope) {
+  const cells = $$(".ai-tut-cell", scope);
+  if (!cells.length) return;
+  for (const cell of cells) {
+    const pid = parseInt(cell.dataset.pid, 10);
+    api(`/problems/${pid}/tutorial/status`)
+      .then(s => {
+        const renderer = _aiCellRenderers[s.tutorial_status] || _aiCellRenderers.missing;
+        cell.innerHTML = renderer(pid, s);
+        attachAITutorialCellHandlers(cell);
+        if (s.tutorial_status === "queued" || s.tutorial_status === "generating") {
+          pollAITutorialCell(cell, pid);
+        }
+      })
+      .catch(_ => { cell.textContent = "—"; });
+  }
+}
+
+function attachAITutorialCellHandlers(cell) {
+  $$("button[data-action]", cell).forEach(b => {
+    const act = b.dataset.action;
+    if (act === "ai-tutorial") {
+      b.onclick = (e) => { e.stopPropagation(); openAITutorialFlow(parseInt(b.dataset.id, 10)); };
+    } else if (act === "ai-generate") {
+      b.onclick = async (e) => {
+        e.stopPropagation();
+        await triggerAITutorialGenerate(parseInt(b.dataset.id, 10), cell);
+      };
+    }
+  });
+}
+
+async function triggerAITutorialGenerate(problemId, cell) {
+  if (!confirm("Start AI tutorial generation for this problem? It typically takes 5–10 minutes per problem.")) return;
+  try {
+    const res = await api(`/problems/${problemId}/tutorial/generate`, { method: "POST" });
+    toast(res.message || "Generation started.", "success");
+    cell.innerHTML = _aiCellRenderers.queued(problemId);
+    pollAITutorialCell(cell, problemId);
+  } catch (e) {
+    toast("Could not start generation: " + (e.message || "error"), "error");
+  }
+}
+
+const _aiCellPollers = new Map();
+function pollAITutorialCell(cell, problemId) {
+  if (_aiCellPollers.has(problemId)) return;
+  const handle = setInterval(async () => {
+    if (!document.contains(cell)) { clearInterval(handle); _aiCellPollers.delete(problemId); return; }
+    try {
+      const s = await api(`/problems/${problemId}/tutorial/status`);
+      const status = s.tutorial_status;
+      if (status === "done" || status === "failed" || status === "missing") {
+        clearInterval(handle); _aiCellPollers.delete(problemId);
+        const renderer = _aiCellRenderers[status] || _aiCellRenderers.missing;
+        cell.innerHTML = renderer(problemId, s.error_message || "");
+        attachAITutorialCellHandlers(cell);
+        if (status === "done")   toast(`AI tutorial generated for problem ${problemId}.`, "success");
+        if (status === "failed") toast(`Generation failed for problem ${problemId}.`, "error");
+        hydrateContestAITutorialSummary();
+      }
+    } catch (e) {
+      clearInterval(handle); _aiCellPollers.delete(problemId);
+    }
+  }, 5000);
+  _aiCellPollers.set(problemId, handle);
+}
+
+async function hydrateContestAITutorialSummary() {
+  const cells = $$(".ai-tut-contest-summary");
+  for (const cell of cells) {
+    const cid = parseInt(cell.dataset.cid, 10);
+    api(`/contests/${cid}/tutorial/status`)
+      .then(s => {
+        const total = s.total;
+        const done  = s.counts.done || 0;
+        const running = (s.counts.queued || 0) + (s.counts.generating || 0);
+        const failed  = s.counts.failed || 0;
+        let badge;
+        if (running > 0) {
+          badge = `<span style="color:var(--accent)">⏳ ${running} generating · ${done}/${total} done</span>`;
+        } else if (done === total && total > 0) {
+          badge = `<span style="color:var(--green)">✓ all ${total} tutorials ready</span>`;
+        } else {
+          badge = `<span>💡 ${done}/${total} AI tutorials${failed ? ' · ' + failed + ' failed' : ''}</span>`;
+        }
+        cell.innerHTML = badge;
+        if (running > 0) pollContestSummary(cell, cid);
+      })
+      .catch(() => { cell.textContent = ""; });
+  }
+}
+
+const _contestPollers = new Map();
+function pollContestSummary(cell, cid) {
+  if (_contestPollers.has(cid)) return;
+  const h = setInterval(async () => {
+    if (!document.contains(cell)) { clearInterval(h); _contestPollers.delete(cid); return; }
+    try {
+      const s = await api(`/contests/${cid}/tutorial/status`);
+      const running = (s.counts.queued || 0) + (s.counts.generating || 0);
+      if (running === 0) {
+        clearInterval(h); _contestPollers.delete(cid);
+      }
+      hydrateContestAITutorialSummary();
+    } catch { clearInterval(h); _contestPollers.delete(cid); }
+  }, 6000);
+  _contestPollers.set(cid, h);
+}
+
+async function onContestGenerateAITutorial(card, cid, contest) {
+  if (!confirm(
+    `Start AI tutorial generation for every problem in "${contest.name}"?\n\n` +
+    `Each problem takes 5–10 minutes; the worker processes them sequentially. ` +
+    `If a contest editorial PDF is on disk under tutorials/, the agent will use it as the base.`
+  )) return;
+  try {
+    const res = await api(`/contests/${cid}/tutorial/generate`, { method: "POST" });
+    if (res.queued_count === 0) {
+      toast(res.message, "success");
+    } else {
+      toast(`Queued ${res.queued_count} problem(s). Watch the contest card for progress.`, "success");
+    }
+    hydrateContestAITutorialSummary();
+  } catch (e) {
+    toast("Could not start contest generation: " + (e.message || "error"), "error");
+  }
+}
+</script>
+
+</body>
+</html>

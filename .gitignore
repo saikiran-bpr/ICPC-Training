@@ -1,0 +1,50 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Secrets (NEVER commit) ---
+.flask_secret
+.cf_api_key
+.env
+.env.*
+!.env.example
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Editor/OS ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Vercel ---
+.vercel/
+
+# --- FUSE noise (Cowork mounts) ---
+.fuse_hidden*
+
+# --- Build/dist ---
+build/
+dist/
+*.egg-info/
+
+# --- Frontend (web/) ---
+web/node_modules/
+web/dist/
+web/.vite/
+web/.env
+web/.env.*
+!web/.env.example
+

@@ -48,13 +48,22 @@ _SAFE_SORT_COLS = {"name", "rating", "date_added", "importance", "id"}
 
 
 def _order_by(sort: str, order: str) -> str:
-    """Build a safe ORDER BY clause from a whitelisted column name + direction."""
+    """Build a safe ORDER BY clause from a whitelisted column name + direction.
+
+    Notes:
+      • NULLS LAST — columns like `rating` are nullable (many problems have no
+        rating); without this, DESC would surface all the unrated rows first.
+      • `, id ASC` tiebreaker — makes ties deterministic so LIMIT/OFFSET
+        pagination can't repeat or skip rows across pages.
+    """
     direction = "ASC" if order.lower() == "asc" else "DESC"
     if sort == "difficulty":
-        return f"{_DIFFICULTY_ORDER_SQL} {direction}, name ASC"
+        return f"{_DIFFICULTY_ORDER_SQL} {direction}, name ASC, id ASC"
     if sort not in _SAFE_SORT_COLS:
         sort = "date_added"
-    return f"{sort} {direction}"
+    if sort == "id":
+        return f"id {direction}"
+    return f"{sort} {direction} NULLS LAST, id ASC"
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +128,22 @@ _ADMIN_VISIBILITY_SQL = (
     ")"
 )
 
+# Optional "filter by assignee" clauses for the Assigned Problems page.
+# A contestant's problems = directly assigned to them OR via a team they're on.
+_ASSIGNED_TO_USER_SQL = (
+    "("
+    "id IN (SELECT problem_id FROM problem_users WHERE user_id = %s AND via_contest = 0)"
+    " OR id IN ("
+    "  SELECT pt.problem_id FROM problem_teams pt"
+    "  JOIN team_members tm ON tm.team_id = pt.team_id"
+    "  WHERE tm.user_id = %s AND pt.via_contest = 0"
+    ")"
+    ")"
+)
+_ASSIGNED_TO_TEAM_SQL = (
+    "id IN (SELECT problem_id FROM problem_teams WHERE team_id = %s AND via_contest = 0)"
+)
+
 
 # ---------------------------------------------------------------------------
 # List query — used by /api/problems
@@ -142,6 +167,14 @@ async def list_assigned(
     else:  # Admin: only problems they themselves assigned
         where.append(_ADMIN_VISIBILITY_SQL)
         params.extend([viewer["id"], viewer["id"]])
+
+    # Optional assignee filters (coach/admin "filter by contestant / team").
+    if filters.assigned_user_id:
+        where.append(_ASSIGNED_TO_USER_SQL)
+        params.extend([filters.assigned_user_id, filters.assigned_user_id])
+    if filters.assigned_team_id:
+        where.append(_ASSIGNED_TO_TEAM_SQL)
+        params.append(filters.assigned_team_id)
 
     where_clause = " WHERE " + " AND ".join(where)
     order_by = _order_by(filters.sort, filters.order)
@@ -198,13 +231,19 @@ def _build_where_filters(filters: ProblemFilters) -> tuple[list[str], list[Any]]
             where.append(f"{col} = %s")
             params.append(val)
 
-    eq("platform", filters.platform)
-    eq("topic", filters.topic)
-    eq("difficulty", filters.difficulty)
-    eq("importance", filters.importance)
-    eq("status", filters.status)
+    def in_(col: str, vals: list[str] | None) -> None:
+        # Multi-select: col = ANY(ARRAY[...]).  Empty/None → no filter.
+        if vals:
+            where.append(f"{col} = ANY(%s)")
+            params.append(list(vals))
+
+    in_("platform", filters.platform)
+    in_("topic", filters.topic)
+    in_("difficulty", filters.difficulty)
+    in_("importance", filters.importance)
+    in_("status", filters.status)
+    in_("contest_type", filters.contest_type)
     eq("suggested_role", filters.suggested_role)
-    eq("contest_type", filters.contest_type)
 
     if filters.rating_min is not None:
         where.append("rating >= %s")

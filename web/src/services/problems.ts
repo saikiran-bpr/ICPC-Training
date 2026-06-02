@@ -48,7 +48,7 @@ export type LookupResponse = {
 export const problemsService = {
   list: (filters: ProblemFilters, opts?: { signal?: AbortSignal }) =>
     api.get<ProblemListResponse>("/problems", {
-      params: filters as Record<string, string | number | undefined>,
+      params: filters as Record<string, string | number | string[] | undefined>,
       signal: opts?.signal,
     }),
 

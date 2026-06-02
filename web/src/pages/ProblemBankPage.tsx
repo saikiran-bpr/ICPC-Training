@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useFetch } from "@/hooks/useFetch"
+import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { useAuth } from "@/contexts/AuthContext"
 import { bankService } from "@/services/bank"
 import { metaService } from "@/services/meta"
@@ -10,15 +11,17 @@ import { Tag } from "@/components/common/Tag"
 import { ProblemModal } from "@/components/problems/ProblemModal"
 import { AssignModal, type AssignTarget } from "@/components/bank/AssignModal"
 import { AITutorialCell } from "@/components/tutorials/AITutorialCell"
+import { MultiFilter, asArr } from "@/components/common/MultiFilter"
 import { ApiError } from "@/lib/api"
 import type { ProblemFilters, Problem } from "@/types/problem"
 
 const DEFAULT_FILTERS: ProblemFilters = {
-  sort: "date_added",
-  order: "desc",
+  sort: "rating",
+  order: "asc",
 }
 
 const PAGE_SIZE = 100
+const SEARCH_DEBOUNCE_MS = 600
 
 export function ProblemBankPage() {
   const { user, role } = useAuth()
@@ -31,14 +34,21 @@ export function ProblemBankPage() {
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null)
 
   const meta = useFetch((signal) => metaService.get({ signal }), [])
+  const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS)
+
+  // A settled search term starts a fresh result set from page 1.
+  useEffect(() => {
+    setPage(0)
+  }, [debouncedSearch])
+
   const effective = useMemo<ProblemFilters>(
     () => ({
       ...filters,
-      q: filters.q || undefined,
+      q: debouncedSearch.trim() || undefined,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
     }),
-    [filters, page],
+    [filters, debouncedSearch, page],
   )
 
   const list = useFetch(
@@ -55,15 +65,11 @@ export function ProblemBankPage() {
     setPage(0)
     setFilters((f) => {
       const next = { ...f }
-      if (v === "" || v == null) delete next[k]
+      if (v === "" || v == null || (Array.isArray(v) && v.length === 0))
+        delete next[k]
       else next[k] = v as ProblemFilters[K]
       return next
     })
-  }
-
-  function applySearch() {
-    setPage(0)
-    setFilters((f) => ({ ...f, q: searchInput.trim() || undefined }))
   }
 
   async function remove(p: Problem) {
@@ -100,43 +106,57 @@ export function ProblemBankPage() {
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-[340px]">
           <input
             type="text"
-            className="toolbar-input"
+            className="toolbar-input w-full"
+            style={{ padding: "11px 14px", fontSize: "15px" }}
             placeholder="Search by name, tag, key idea..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applySearch()
-            }}
-            onBlur={applySearch}
           />
         </div>
-        <FilterMini
+        <MultiFilter
           label="Platform"
-          value={filters.platform}
+          selected={asArr(filters.platform)}
           options={meta.data?.platforms}
           onChange={(v) => set("platform", v)}
         />
-        <FilterMini
+        <MultiFilter
           label="Topic"
-          value={filters.topic}
+          selected={asArr(filters.topic)}
           options={meta.data?.topics}
           onChange={(v) => set("topic", v)}
         />
-        <FilterMini
+        <MultiFilter
           label="Difficulty"
-          value={filters.difficulty}
+          selected={asArr(filters.difficulty)}
           options={meta.data?.difficulties}
           onChange={(v) => set("difficulty", v)}
         />
-        <FilterMini
+        <MultiFilter
           label="Importance"
-          value={filters.importance}
+          selected={asArr(filters.importance)}
           options={meta.data?.importance}
           onChange={(v) => set("importance", v)}
         />
+        <div className="flex flex-col">
+          <label className="filter-label">Sort by</label>
+          <select
+            className="filter-control min-w-[150px]"
+            value={`${filters.sort ?? "rating"}:${filters.order ?? "asc"}`}
+            onChange={(e) => {
+              const [s, o] = e.target.value.split(":")
+              setPage(0)
+              setFilters((f) => ({ ...f, sort: s, order: o as "asc" | "desc" }))
+            }}
+          >
+            <option value="rating:asc">Rating ↑ (low→high)</option>
+            <option value="rating:desc">Rating ↓ (high→low)</option>
+            <option value="date_added:desc">Newest</option>
+            <option value="name:asc">Name (A→Z)</option>
+          </select>
+        </div>
         <div className="flex flex-col">
           <label className="filter-label">Rating</label>
           <div className="flex gap-1">
@@ -343,35 +363,5 @@ function BankRow({
         </div>
       </td>
     </tr>
-  )
-}
-
-function FilterMini({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string
-  value: string | undefined
-  options: string[] | undefined
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="flex flex-col">
-      <label className="filter-label">{label}</label>
-      <select
-        className="filter-control min-w-[120px]"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">All</option>
-        {options?.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-    </div>
   )
 }

@@ -81,13 +81,17 @@ export type ProblemListResponse = {
 
 export type ProblemFilters = {
   q?: string
-  platform?: string
-  topic?: string
-  difficulty?: string
-  importance?: string
-  status?: string
+  // Multi-select capable: the Problem Bank passes arrays; the Assigned
+  // sidebar passes single strings. The API client serialises both.
+  platform?: string | string[]
+  topic?: string | string[]
+  difficulty?: string | string[]
+  importance?: string | string[]
+  status?: string | string[]
+  contest_type?: string | string[]
   suggested_role?: string
-  contest_type?: string
+  assigned_user_id?: number
+  assigned_team_id?: number
   rating_min?: number
   rating_max?: number
   sort?: string

@@ -12,7 +12,7 @@ export const bankService = {
     opts?: { signal?: AbortSignal },
   ) =>
     api.get<ProblemListResponse>("/bank/problems", {
-      params: filters as Record<string, string | number | undefined>,
+      params: filters as Record<string, string | number | string[] | undefined>,
       signal: opts?.signal,
     }),
 

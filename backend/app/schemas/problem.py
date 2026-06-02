@@ -210,13 +210,19 @@ class ProblemFilters(BaseModel):
     """All query params the list endpoint accepts."""
 
     q: str | None = None
-    platform: str | None = None
-    topic: str | None = None
-    difficulty: str | None = None
-    importance: str | None = None
-    status: str | None = None
+    # Multi-select filters — repeated query params collect into a list
+    # (a single value parses to a one-element list, so single-select callers
+    # like the Assigned Problems sidebar keep working unchanged).
+    platform: list[str] | None = None
+    topic: list[str] | None = None
+    difficulty: list[str] | None = None
+    importance: list[str] | None = None
+    status: list[str] | None = None
+    contest_type: list[str] | None = None
     suggested_role: str | None = None
-    contest_type: str | None = None
+    # Coach/Admin "filter by assignee" on the Assigned Problems page.
+    assigned_user_id: int | None = None
+    assigned_team_id: int | None = None
     rating_min: int | None = None
     rating_max: int | None = None
     sort: SortKey = "date_added"

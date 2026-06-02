@@ -10,8 +10,16 @@ export class ApiError extends Error {
   }
 }
 
+type ParamValue =
+  | string
+  | number
+  | boolean
+  | undefined
+  | null
+  | (string | number)[]
+
 type RequestOptions = {
-  params?: Record<string, string | number | boolean | undefined | null>
+  params?: Record<string, ParamValue>
   body?: unknown
   signal?: AbortSignal
   headers?: Record<string, string>
@@ -26,6 +34,14 @@ async function request<T>(
   if (opts.params) {
     for (const [k, v] of Object.entries(opts.params)) {
       if (v === undefined || v === null || v === "") continue
+      if (Array.isArray(v)) {
+        // Repeated query params: ?platform=a&platform=b
+        for (const item of v) {
+          if (item === undefined || item === null || item === "") continue
+          url.searchParams.append(k, String(item))
+        }
+        continue
+      }
       url.searchParams.append(k, String(v))
     }
   }

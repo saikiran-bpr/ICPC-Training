@@ -43,11 +43,20 @@ export function ProblemsPage() {
   }
 
   function exportXlsx() {
-    const url = new URL("/api/export/xlsx", window.location.origin)
+    // Hit the API origin (same backend as fetches); falls back to same-origin
+    // in dev where Vite proxies /api.
+    const base = import.meta.env.VITE_API_BASE_URL || window.location.origin
+    const url = new URL("/api/export/xlsx", base)
     for (const [k, v] of Object.entries(effective)) {
-      if (v !== undefined && v !== null && v !== "") {
-        url.searchParams.append(k, String(v))
+      if (v === undefined || v === null || v === "") continue
+      if (Array.isArray(v)) {
+        for (const item of v) {
+          if (item !== undefined && item !== null && item !== "")
+            url.searchParams.append(k, String(item))
+        }
+        continue
       }
+      url.searchParams.append(k, String(v))
     }
     window.open(url.toString(), "_blank")
     toast.success("Export started")
@@ -60,6 +69,7 @@ export function ProblemsPage() {
         filters={filters}
         onChange={setFilters}
         onClear={clearAll}
+        role={role}
       />
 
       <div className="flex-1 min-w-0 overflow-y-auto px-5 py-4 space-y-4">

@@ -18,8 +18,7 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
-    // TODO: remove these defaults before going to production.
-    defaultValues: { email: "admin@gmail.com", password: "admin123" },
+    defaultValues: { email: "", password: "" },
   })
 
   async function onSubmit(values: LoginInput) {

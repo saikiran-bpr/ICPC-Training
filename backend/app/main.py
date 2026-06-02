@@ -66,6 +66,15 @@ app.add_middleware(
 
 register_handlers(app)
 
+# --- health check (used by Render's health probe) -----------------------------
+
+
+@app.get("/healthz")
+async def healthz() -> dict:
+    """Liveness probe.  Intentionally does NOT touch the DB so a transient
+    Supabase hiccup doesn't flap the service health."""
+    return {"ok": True}
+
 # --- API routers --------------------------------------------------------------
 
 app.include_router(auth_router.router, prefix="/api")
@@ -99,14 +108,16 @@ async def index() -> FileResponse:
 
 @app.get("/files/{relpath:path}")
 async def serve_project_file(relpath: str) -> FileResponse:
-    """Serve project-relative files (tutorial PDFs, etc.).  Confined to
-    REPO_ROOT to block `..` traversal — matches legacy/app.py:486-498."""
+    """Serve tutorial PDFs referenced by `contest.tutorial_pdf` /
+    `tutorial_translated`.  Confined to REPO_ROOT to block `..` traversal AND
+    restricted to `.pdf` files — otherwise this is an unauthenticated arbitrary
+    file read (source code, .env, etc.).  This endpoint only ever serves PDFs."""
     target = (REPO_ROOT / relpath).resolve()
     try:
         target.relative_to(REPO_ROOT)
     except ValueError:
         raise not_found()
-    if not target.is_file():
+    if target.suffix.lower() != ".pdf" or not target.is_file():
         raise not_found()
     return FileResponse(target)
 

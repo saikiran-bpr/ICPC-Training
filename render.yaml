@@ -1,0 +1,51 @@
+# Render Blueprint — deploys the FastAPI API + the React static site.
+# Create from the Render dashboard: New → Blueprint → point at this repo.
+# Values marked `sync: false` must be filled in the dashboard (secrets / URLs).
+services:
+  # --------------------------------------------------------------------------
+  # Backend API (FastAPI)
+  # --------------------------------------------------------------------------
+  - type: web
+    name: icpc-api
+    runtime: python
+    rootDir: .
+    plan: free
+    buildCommand: pip install ./backend
+    # Apply pending migrations, then serve. On free (single instance) running
+    # migrate here is safe; on a paid/multi-instance plan move this line to a
+    # `preDeployCommand` so it runs once per deploy instead of per instance.
+    startCommand: python -m backend.scripts.migrate && uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_URL          # Supabase: prefer the pooler host:6543
+        sync: false
+      - key: FLASK_SECRET_KEY      # FIXED random hex — do NOT regenerate per deploy
+        sync: false                # (regenerating invalidates every session)
+      - key: CORS_ORIGINS          # e.g. https://icpc-web.onrender.com
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE       # cross-site frontend → must be "none"
+        value: "none"
+      - key: DEBUG
+        value: "false"
+
+  # --------------------------------------------------------------------------
+  # Frontend (React / Vite static site)
+  # --------------------------------------------------------------------------
+  - type: web
+    name: icpc-web
+    runtime: static
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL     # build-time! e.g. https://icpc-api.onrender.com
+        sync: false
+    routes:
+      # SPA fallback so deep links / refresh on nested routes serve index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -36,13 +36,20 @@ def _set_session_cookie(resp: Response, user_id: int) -> None:
         value=token,
         max_age=settings.session_lifetime_days * 86_400,
         httponly=True,
-        samesite="lax",
-        secure=False,  # set True in prod (HTTPS) via reverse proxy or env-toggle
+        samesite=settings.cookie_samesite,  # "none" in prod for cross-site
+        secure=settings.cookie_secure,      # True in prod (HTTPS)
+        path="/",
     )
 
 
 def _clear_session_cookie(resp: Response) -> None:
-    resp.delete_cookie(settings.session_cookie_name)
+    # Flags must match set_cookie or the browser won't clear it.
+    resp.delete_cookie(
+        settings.session_cookie_name,
+        path="/",
+        samesite=settings.cookie_samesite,
+        secure=settings.cookie_secure,
+    )
 
 
 # ---------------------------------------------------------------------------

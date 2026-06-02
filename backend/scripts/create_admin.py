@@ -37,17 +37,20 @@ async def _run(email: str, name: str, password: str) -> None:
         existing = await cur.fetchone()
         if existing:
             await conn.execute(
-                "UPDATE users SET password_hash = %s, role = 'Admin', is_active = 1 "
-                "WHERE id = %s",
+                "UPDATE users SET password_hash = %s, role = 'Admin', "
+                "is_active = 1, status = 'approved' WHERE id = %s",
                 (hash_password(password), existing["id"]),
             )
             await conn.commit()
             print(f"[create_admin] {email!r} already existed — promoted to Admin "
                   "and password reset.")
         else:
+            # status='approved' so the admin can sign in immediately — the
+            # signup-approval flow (migration 0003) defaults new rows to
+            # 'pending', which would otherwise block login.
             await conn.execute(
-                "INSERT INTO users (email, password_hash, name, role) "
-                "VALUES (%s, %s, %s, 'Admin')",
+                "INSERT INTO users (email, password_hash, name, role, status) "
+                "VALUES (%s, %s, %s, 'Admin', 'approved')",
                 (email, hash_password(password), name),
             )
             await conn.commit()

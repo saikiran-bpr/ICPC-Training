@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import type { SignupInput } from "@/types/auth"
 import { useAuth } from "@/contexts/AuthContext"
 import { ApiError } from "@/lib/api"
+import colleges from "@/data/colleges.json"
 
 type SignupForm = {
   email: string
@@ -116,12 +117,14 @@ export function SignupPage() {
               />
             </Field>
             <Field label="Institution">
-              <input
-                type="text"
-                placeholder="optional"
-                className="auth-input"
-                {...register("institution")}
-              />
+              <select className="auth-input" {...register("institution")}>
+                <option value="">Select your institution</option>
+                {colleges.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </Field>
           </div>
 

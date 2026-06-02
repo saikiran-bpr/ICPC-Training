@@ -7,6 +7,7 @@ import { metaService } from "@/services/meta"
 import { usersService, type UserCreate } from "@/services/users"
 import { ApiError } from "@/lib/api"
 import type { User, UserRole } from "@/types/user"
+import colleges from "@/data/colleges.json"
 
 type FormShape = {
   name: string
@@ -137,7 +138,14 @@ export function UserCreateModal({
         </div>
         <div>
           <label className="form-label">Institution</label>
-          <input className="form-control" {...register("institution")} />
+          <select className="form-control" {...register("institution")}>
+            <option value="">Select institution</option>
+            {colleges.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
       </form>
     </Modal>

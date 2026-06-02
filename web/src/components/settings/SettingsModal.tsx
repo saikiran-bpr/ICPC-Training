@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { usersService } from "@/services/users"
 import { authService } from "@/services/auth"
 import { ApiError } from "@/lib/api"
+import colleges from "@/data/colleges.json"
 
 type ProfileForm = {
   name: string
@@ -108,7 +109,18 @@ function ProfileSection({
         </div>
         <div>
           <label className="form-label">Institution</label>
-          <input className="form-control" {...register("institution")} />
+          <select className="form-control" {...register("institution")}>
+            <option value="">Select your institution</option>
+            {/* Preserve a previously-saved value that isn't in the list. */}
+            {user.institution && !colleges.includes(user.institution) && (
+              <option value={user.institution}>{user.institution}</option>
+            )}
+            {colleges.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
         {isContestant && (
           <div>

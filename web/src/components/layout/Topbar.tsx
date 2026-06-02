@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
@@ -6,6 +6,9 @@ import { adminService } from "@/services/admin"
 import { cn } from "@/lib/utils"
 import type { UserRole } from "@/types/user"
 import { SettingsModal } from "@/components/settings/SettingsModal"
+
+const BUG_REPORT_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSf9ApfYP8ExYHtPV0VHJn6z6RT3-a35QCXEbEeIGV2k8JzfLw/viewform?usp=sharing&ouid=108270920106753806595"
 
 type Tab = {
   to: string
@@ -29,10 +32,29 @@ export function Topbar() {
   const location = useLocation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const tabs = TABS.filter(
     (t) => !t.allow || (role && t.allow.includes(role)),
   )
+
+  // Close the account dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    function onDown(e: MouseEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [menuOpen])
 
   // Refresh the pending-requests badge for admins. Re-fetched on route
   // changes so approving on /requests immediately reflects in the badge.
@@ -114,8 +136,17 @@ export function Topbar() {
             </NavLink>
           ))}
         </nav>
-
-        <div className="ml-auto flex items-center gap-3 text-[13px]">
+        <div className="ml-auto flex items-center gap-3">
+          <a
+            href={BUG_REPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Report a bug or give feedback"
+            className="px-3 py-1 rounded-md border text-[13px] hover:bg-[color:var(--c-panel-2)] transition-colors"
+            style={{ borderColor: "var(--c-border)" }}
+          >
+            🐞 Report a Bug
+          </a>
           {role && (
             <span
               className={cn(
@@ -126,23 +157,71 @@ export function Topbar() {
               {role}
             </span>
           )}
-          <span className="text-[color:var(--c-text)]">{user.name}</span>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            title="Settings"
-            className="h-7 w-7 grid place-items-center rounded-md hover:bg-[color:var(--c-panel-2)] transition-colors"
-          >
-            ⚙
-          </button>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="px-3 py-1 rounded-md border text-[13px] hover:bg-[color:var(--c-panel-2)] transition-colors"
-            style={{ borderColor: "var(--c-border)" }}
-          >
-            Logout
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              title={user.name}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="h-8 w-8 rounded-full grid place-items-center text-[13px] font-semibold transition-transform hover:scale-105"
+              style={{
+                background: "var(--c-panel-2)",
+                border: "2px solid var(--c-accent)",
+                color: "var(--c-text)",
+              }}
+            >
+              {(user.name.trim().charAt(0) || "?").toUpperCase()}
+            </button>
+
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 w-56 rounded-md border shadow-lg py-1 z-20"
+                style={{
+                  background: "var(--c-panel)",
+                  borderColor: "var(--c-border)",
+                }}
+              >
+                <div
+                  className="px-3 py-2.5 border-b"
+                  style={{ borderColor: "var(--c-border)" }}
+                >
+                  <div className="text-[13px] font-medium text-[color:var(--c-text)] truncate">
+                    {user.name}
+                  </div>
+                  {user.email && (
+                    <div className="text-[11px] text-[color:var(--c-muted)] truncate mt-0.5">
+                      {user.email}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setSettingsOpen(true)
+                  }}
+                  className="w-full text-left px-3 py-2 text-[13px] flex items-center gap-2 hover:bg-[color:var(--c-panel-2)] transition-colors"
+                >
+                  <span>⚙</span> Settings
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onLogout()
+                  }}
+                  className="w-full text-left px-3 py-2 text-[13px] flex items-center gap-2 hover:bg-[color:var(--c-panel-2)] transition-colors"
+                  style={{ color: "var(--c-red)" }}
+                >
+                  <span>⎋</span> Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

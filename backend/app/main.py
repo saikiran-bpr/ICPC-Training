@@ -97,14 +97,6 @@ app.include_router(tutorials_router.router, prefix="/api")
 # client.  Kept so an admin can still open http://localhost:8000/ in a
 # pinch and see the old UI.
 
-@app.get("/")
-async def index() -> FileResponse:
-    """Serve the legacy single-file SPA from `static/index.html`."""
-    target = STATIC_DIR / "index.html"
-    if not target.exists():
-        raise not_found("static/index.html not found")
-    return FileResponse(target)
-
 
 @app.get("/files/{relpath:path}")
 async def serve_project_file(relpath: str) -> FileResponse:

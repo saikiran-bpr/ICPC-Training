@@ -52,14 +52,8 @@ export type Problem = {
   sub_topic: string | null
   tags: string[]
   importance: string | null
-  suggested_role: string | null
-  prerequisites: string | null
   key_idea: string | null
-  editorial_url: string | null
-  time_limit_ms: number | null
-  memory_limit_mb: number | null
   status: string | null
-  assigned_to: string | null
   created_by: number | null
   notes: string | null
   date_added: string | null
@@ -89,7 +83,6 @@ export type ProblemFilters = {
   importance?: string | string[]
   status?: string | string[]
   contest_type?: string | string[]
-  suggested_role?: string
   assigned_user_id?: number
   assigned_team_id?: number
   rating_min?: number

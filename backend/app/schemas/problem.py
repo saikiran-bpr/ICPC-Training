@@ -112,17 +112,10 @@ class ProblemOut(BaseModel):
     tags: TagList = Field(default_factory=list)
 
     importance: str | None = None
-    suggested_role: str | None = None
-    prerequisites: str | None = None
     key_idea: str | None = None
-    editorial_url: str | None = None
-    time_limit_ms: int | None = None
-    memory_limit_mb: int | None = None
 
     status: str | None = "Todo"
-    assigned_to: str | None = None
     created_by: int | None = None
-    is_bank: BoolFromInt = False
     from_contest: BoolFromInt = False
     notes: str | None = None
 
@@ -172,14 +165,8 @@ class ProblemWrite(BaseModel):
     # Frontend may send list OR comma-separated string; tolerant on the way in.
     tags: list[str] | str | None = None
     importance: str | None = None
-    suggested_role: str | None = None
-    prerequisites: str | None = None
     key_idea: str | None = None
-    editorial_url: str | None = None
-    time_limit_ms: int | None = None
-    memory_limit_mb: int | None = None
     status: str | None = None
-    assigned_to: str | None = None
     notes: str | None = None
 
     # Many-to-many assignments — if omitted, the existing list is preserved.
@@ -219,7 +206,6 @@ class ProblemFilters(BaseModel):
     importance: list[str] | None = None
     status: list[str] | None = None
     contest_type: list[str] | None = None
-    suggested_role: str | None = None
     # Coach/Admin "filter by assignee" on the Assigned Problems page.
     assigned_user_id: int | None = None
     assigned_team_id: int | None = None

@@ -226,11 +226,6 @@ def _build_where_filters(filters: ProblemFilters) -> tuple[list[str], list[Any]]
     where: list[str] = []
     params: list[Any] = []
 
-    def eq(col: str, val: Any) -> None:
-        if val not in (None, ""):
-            where.append(f"{col} = %s")
-            params.append(val)
-
     def in_(col: str, vals: list[str] | None) -> None:
         # Multi-select: col = ANY(ARRAY[...]).  Empty/None → no filter.
         if vals:
@@ -243,7 +238,6 @@ def _build_where_filters(filters: ProblemFilters) -> tuple[list[str], list[Any]]
     in_("importance", filters.importance)
     in_("status", filters.status)
     in_("contest_type", filters.contest_type)
-    eq("suggested_role", filters.suggested_role)
 
     if filters.rating_min is not None:
         where.append("rating >= %s")
@@ -638,9 +632,7 @@ EDITABLE_COLUMNS = frozenset(
     {
         "name", "url", "platform", "contest_type",
         "rating", "difficulty", "topic", "sub_topic", "tags",
-        "importance", "suggested_role", "prerequisites", "key_idea",
-        "editorial_url", "time_limit_ms", "memory_limit_mb",
-        "status", "assigned_to", "notes",
+        "importance", "key_idea", "status", "notes",
     }
 )
 
@@ -653,7 +645,7 @@ def normalise_payload(payload: dict[str, Any]) -> dict[str, Any]:
             clean[k] = payload[k]
     if "tags" in clean:
         clean["tags"] = _tags_to_db(clean["tags"])
-    for k in ("rating", "time_limit_ms", "memory_limit_mb"):
+    for k in ("rating",):
         if k in clean:
             v = clean[k]
             if v in (None, ""):
@@ -672,7 +664,6 @@ async def insert(
     """Insert a problem. Caller already called `normalise_payload`."""
     data = dict(data)
     data["created_by"] = created_by
-    data["is_bank"] = 1
     cols = list(data.keys())
     placeholders = ", ".join(["%s"] * len(cols))
     cur = await conn.execute(
@@ -726,7 +717,6 @@ async def bulk_insert(
             continue
         data = normalise_payload(item)
         data["created_by"] = created_by
-        data["is_bank"] = 1
         valid.append((data, idx))
 
     # Insert each item — keep it simple + report errors per-row (a unique-URL

@@ -29,10 +29,8 @@ CREATED_BY_ENV = os.environ.get("CREATED_BY")
 
 COLS = [
     "name", "url", "platform", "contest_type", "rating", "difficulty", "topic",
-    "sub_topic", "tags", "importance", "suggested_role", "prerequisites",
-    "key_idea", "editorial_url", "time_limit_ms", "memory_limit_mb", "status",
-    "assigned_to", "created_by", "is_bank", "from_contest", "notes",
-    "date_added", "date_updated",
+    "sub_topic", "tags", "importance", "key_idea", "status",
+    "created_by", "from_contest", "notes", "date_added", "date_updated",
 ]
 
 
@@ -72,16 +70,9 @@ def build_row(r: dict, created_by: int) -> tuple:
         clean(r["sub_topic"]),
         ctags(r["tags"]),
         clean(r["importance"]),
-        clean(r["suggested_role"]),
-        clean(r["prerequisites"]),
         clean(r["key_idea"]),
-        clean(r["editorial_url"]),
-        cint(r["time_limit_ms"]),
-        cint(r["memory_limit_mb"]),
         clean(r["status"]) or "Todo",
-        clean(r["assigned_to"]),
         created_by,
-        cint(r["is_bank"]) if cint(r["is_bank"]) is not None else 1,
         cint(r["from_contest"]) if cint(r["from_contest"]) is not None else 0,
         clean(r["notes"]),
         clean(r["date_added"]),

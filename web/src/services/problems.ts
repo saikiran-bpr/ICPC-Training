@@ -16,10 +16,7 @@ export type ProblemWrite = {
   sub_topic?: string | null
   tags?: string[]
   importance?: string
-  suggested_role?: string
-  prerequisites?: string | null
   key_idea?: string | null
-  editorial_url?: string | null
   status?: string
   notes?: string | null
   assigned_user_ids?: number[]

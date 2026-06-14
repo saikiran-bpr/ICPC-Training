@@ -33,7 +33,13 @@ from app.schemas.contest import (
     ContestUpdate,
     ContestWithProblems,
 )
-from app.schemas.problem import ProblemFilters, ProblemListResponse, ProblemOut
+from app.schemas.problem import (
+    BatchAssignIn,
+    BatchAssignResult,
+    ProblemFilters,
+    ProblemListResponse,
+    ProblemOut,
+)
 
 router = APIRouter(prefix="/bank", tags=["bank"])
 
@@ -93,6 +99,59 @@ async def assign_from_bank(
     assert row is not None
     hydrated = await problems_repo.hydrate_many(conn, [row], me)
     return hydrated[0]
+
+
+@router.post(
+    "/problems/assign",
+    response_model=BatchAssignResult,
+)
+async def batch_assign_from_bank(
+    me: RequireCoachOrAdmin,
+    conn: ConnDep,
+    payload: BatchAssignIn,
+) -> dict:
+    """Batch-assign several catalog problems to users/teams in one call.
+
+    Same per-problem semantics as `assign_from_bank` (additive merge — the bank
+    entries stay, existing assignments are preserved).  Validation mirrors the
+    single-problem endpoint: every problem id must exist, every assigned user
+    must be a Contestant, and a Coach may only assign to teams they coach.
+    """
+    if not payload.problem_ids:
+        raise bad_request("Provide at least one problem_id")
+    if not payload.assigned_user_ids and not payload.assigned_team_ids:
+        raise bad_request(
+            "Provide at least one assigned_user_ids or assigned_team_ids"
+        )
+
+    # De-dupe while preserving order so the cross-product can't double-insert.
+    problem_ids = list(dict.fromkeys(payload.problem_ids))
+
+    found = await problems_repo.existing_ids(conn, problem_ids)
+    missing = [pid for pid in problem_ids if pid not in found]
+    if missing:
+        raise bad_request(f"Unknown problem id(s): {missing}")
+
+    try:
+        await problems_repo.validate_assignment_targets(
+            conn, payload.assigned_user_ids, payload.assigned_team_ids, me
+        )
+    except ValueError as e:
+        raise bad_request(str(e)) from e
+
+    await contests_repo.assign_bank_problems_batch(
+        conn,
+        problem_ids,
+        payload.assigned_user_ids,
+        payload.assigned_team_ids,
+        me["id"],
+    )
+
+    return {
+        "problems_assigned": len(problem_ids),
+        "users_assigned": len(payload.assigned_user_ids),
+        "teams_assigned": len(payload.assigned_team_ids),
+    }
 
 
 # ===========================================================================

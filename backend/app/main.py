@@ -92,12 +92,6 @@ app.include_router(export_router.router, prefix="/api")
 app.include_router(tutorials_router.router, prefix="/api")
 
 
-# --- legacy static SPA + project file serving --------------------------------
-# These two routes are placeholders until the React frontend is the only
-# client.  Kept so an admin can still open http://localhost:8000/ in a
-# pinch and see the old UI.
-
-
 @app.get("/files/{relpath:path}")
 async def serve_project_file(relpath: str) -> FileResponse:
     """Serve tutorial PDFs referenced by `contest.tutorial_pdf` /

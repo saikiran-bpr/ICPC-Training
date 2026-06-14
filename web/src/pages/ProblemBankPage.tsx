@@ -10,7 +10,6 @@ import { Pill } from "@/components/common/Pill"
 import { Tag } from "@/components/common/Tag"
 import { ProblemModal } from "@/components/problems/ProblemModal"
 import { AssignModal, type AssignTarget } from "@/components/bank/AssignModal"
-import { AITutorialCell } from "@/components/tutorials/AITutorialCell"
 import { MultiFilter, asArr } from "@/components/common/MultiFilter"
 import { ApiError } from "@/lib/api"
 import type { ProblemFilters, Problem } from "@/types/problem"
@@ -32,6 +31,10 @@ export function ProblemBankPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Problem | null>(null)
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null)
+  // Ids of problems ticked for batch-assign.  Persists across pages/filters so
+  // a coach can build a selection while browsing; cleared after a successful
+  // assign or via the "Clear" button.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   const meta = useFetch((signal) => metaService.get({ signal }), [])
   const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS)
@@ -57,6 +60,36 @@ export function ProblemBankPage() {
   )
 
   const refresh = () => setReloadTick((n) => n + 1)
+
+  const pageRows = list.data?.results ?? []
+  const pageIds = pageRows.map((p) => p.id)
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id))
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id))
+
+  function toggleOne(id: number, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  function togglePage(checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const id of pageIds) {
+        if (checked) next.add(id)
+        else next.delete(id)
+      }
+      return next
+    })
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set())
+  }
 
   function set<K extends keyof ProblemFilters>(
     k: K,
@@ -104,6 +137,40 @@ export function ProblemBankPage() {
           </button>
         </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex justify-end">
+          <div
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5"
+            style={{
+              background: "var(--c-panel)",
+              borderColor: "var(--c-accent)",
+            }}
+          >
+            <span className="text-[12px] font-medium whitespace-nowrap">
+              {selectedIds.size} problem{selectedIds.size === 1 ? "" : "s"} selected
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() =>
+                setAssignTarget({
+                  kind: "problems",
+                  ids: [...selectedIds],
+                  label: `${selectedIds.size} problem${
+                    selectedIds.size === 1 ? "" : "s"
+                  } selected`,
+                })
+              }
+            >
+              Assign selected
+            </button>
+            <button type="button" className="btn btn-sm" onClick={clearSelection}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[340px]">
@@ -200,6 +267,20 @@ export function ProblemBankPage() {
         <table className="data-table w-full">
           <thead>
             <tr>
+              <th style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 cursor-pointer align-middle accent-[color:var(--c-accent)]"
+                  aria-label="Select all problems on this page"
+                  checked={allPageSelected}
+                  ref={(el) => {
+                    if (el)
+                      el.indeterminate = somePageSelected && !allPageSelected
+                  }}
+                  onChange={(e) => togglePage(e.target.checked)}
+                  disabled={pageIds.length === 0}
+                />
+              </th>
               <th>Name</th>
               <th>Platform / Contest</th>
               <th>Rating</th>
@@ -207,7 +288,6 @@ export function ProblemBankPage() {
               <th>Topic</th>
               <th>Tags</th>
               <th>Importance</th>
-              <th>AI Tutorial</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -236,6 +316,8 @@ export function ProblemBankPage() {
                     key={p.id}
                     p={p}
                     canManage={canManage}
+                    selected={selectedIds.has(p.id)}
+                    onToggleSelect={(checked) => toggleOne(p.id, checked)}
                     onAssign={() =>
                       setAssignTarget({ kind: "problem", id: p.id, label: p.name })
                     }
@@ -290,7 +372,12 @@ export function ProblemBankPage() {
         open={assignTarget !== null}
         onClose={() => setAssignTarget(null)}
         target={assignTarget}
-        onAssigned={refresh}
+        onAssigned={() => {
+          // A batch assign consumes the current selection; clear it so the
+          // action bar collapses and stale ids don't linger.
+          if (assignTarget?.kind === "problems") clearSelection()
+          refresh()
+        }}
       />
     </div>
   )
@@ -299,18 +386,31 @@ export function ProblemBankPage() {
 function BankRow({
   p,
   canManage,
+  selected,
+  onToggleSelect,
   onAssign,
   onEdit,
   onDelete,
 }: {
   p: Problem
   canManage: boolean
+  selected: boolean
+  onToggleSelect: (checked: boolean) => void
   onAssign: () => void
   onEdit: () => void
   onDelete: () => void
 }) {
   return (
-    <tr>
+    <tr style={selected ? { background: "var(--c-accent-soft, rgba(59,130,246,0.08))" } : undefined}>
+      <td>
+        <input
+          type="checkbox"
+          className="h-4 w-4 cursor-pointer align-middle accent-[color:var(--c-accent)]"
+          aria-label={`Select ${p.name}`}
+          checked={selected}
+          onChange={(e) => onToggleSelect(e.target.checked)}
+        />
+      </td>
       <td>
         <a
           href={p.url}
@@ -342,9 +442,6 @@ function BankRow({
         </div>
       </td>
       <td><Pill value={p.importance} /></td>
-      <td>
-        <AITutorialCell problemId={p.id} />
-      </td>
       <td>
         <div className="flex gap-1">
           <button type="button" className="btn btn-sm btn-primary" onClick={onAssign}>

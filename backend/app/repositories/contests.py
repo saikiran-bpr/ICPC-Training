@@ -500,10 +500,39 @@ async def assign_bank_problem(
 ) -> None:
     """Add (or downgrade existing contest-derived) per-problem assignments.
 
-    Skill: data-upsert.  ON CONFLICT DO UPDATE makes manual assignments
-    always win (via_contest = 0) — matches legacy semantics.  The assigner is
-    refreshed too, so a re-assignment reflects who last assigned it."""
+    Single-problem case of `assign_bank_problems_batch` — see that function for
+    the upsert semantics.  Kept as a named wrapper so the single-assign callers
+    read clearly; both paths run the exact same SQL."""
+    await assign_bank_problems_batch(
+        conn, [problem_id], user_ids, team_ids, assigned_by
+    )
+
+
+async def assign_bank_problems_batch(
+    conn: AsyncConnection,
+    problem_ids: list[int],
+    user_ids: list[int],
+    team_ids: list[int],
+    assigned_by: int | None = None,
+) -> None:
+    """Batch variant of `assign_bank_problem` — assign every problem in
+    `problem_ids` to the given users/teams in one round-trip per junction.
+
+    Identical semantics to `assign_bank_problem` applied across the
+    cross-product of (problem x target):
+
+      • Skill: data-upsert.  ON CONFLICT DO UPDATE makes manual assignments
+        always win (via_contest = 0).  Existing assignments are never wiped —
+        the operation is purely additive — so a coach batch-assigning a problem
+        can't clobber another coach's prior assignment.
+      • Skill: data-batch-inserts.  executemany sends the whole cross-product in
+        a single statement instead of N per-problem calls.
+      • The assigner is refreshed so a re-assignment reflects who last assigned.
+    """
     if user_ids:
+        pairs = [
+            (pid, uid, assigned_by) for pid in problem_ids for uid in user_ids
+        ]
         await conn.cursor().executemany(
             """
             INSERT INTO problem_users (problem_id, user_id, via_contest, assigned_by)
@@ -511,9 +540,12 @@ async def assign_bank_problem(
             ON CONFLICT (problem_id, user_id)
                 DO UPDATE SET via_contest = 0, assigned_by = EXCLUDED.assigned_by
             """,
-            [(problem_id, uid, assigned_by) for uid in user_ids],
+            pairs,
         )
     if team_ids:
+        pairs = [
+            (pid, tid, assigned_by) for pid in problem_ids for tid in team_ids
+        ]
         await conn.cursor().executemany(
             """
             INSERT INTO problem_teams (problem_id, team_id, via_contest, assigned_by)
@@ -521,7 +553,7 @@ async def assign_bank_problem(
             ON CONFLICT (problem_id, team_id)
                 DO UPDATE SET via_contest = 0, assigned_by = EXCLUDED.assigned_by
             """,
-            [(problem_id, tid, assigned_by) for tid in team_ids],
+            pairs,
         )
 
 

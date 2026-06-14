@@ -3,7 +3,6 @@ import { useFetch } from "@/hooks/useFetch"
 import { contestsService } from "@/services/contests"
 import { Tag } from "@/components/common/Tag"
 import { Pill } from "@/components/common/Pill"
-import { AITutorialCell } from "@/components/tutorials/AITutorialCell"
 import { ApiError } from "@/lib/api"
 import type { Problem } from "@/types/problem"
 
@@ -73,7 +72,6 @@ export function ContestProblemsPanel({
               <th>Rating</th>
               <th>Topic</th>
               <th>Assigned to</th>
-              <th>AI Tutorial</th>
               {canManage && <th>Actions</th>}
             </tr>
           </thead>
@@ -81,7 +79,7 @@ export function ContestProblemsPanel({
             {data?.problems.length === 0 ? (
               <tr>
                 <td
-                  colSpan={canManage ? 8 : 7}
+                  colSpan={canManage ? 7 : 6}
                   className="empty-cell"
                 >
                   No problems in this contest yet.
@@ -125,9 +123,6 @@ export function ContestProblemsPanel({
                           </span>
                         )}
                     </div>
-                  </td>
-                  <td>
-                    <AITutorialCell problemId={p.id} />
                   </td>
                   {canManage && (
                     <td>

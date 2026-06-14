@@ -265,6 +265,17 @@ async def get_by_id(conn: AsyncConnection, pid: int) -> dict[str, Any] | None:
     return await fetch_one(conn, "SELECT * FROM problems WHERE id = %s", (pid,))
 
 
+async def existing_ids(conn: AsyncConnection, ids: list[int]) -> set[int]:
+    """Return the subset of `ids` that correspond to real problem rows.
+    One batched query — used to validate a batch-assign request."""
+    if not ids:
+        return set()
+    rows = await fetch_all(
+        conn, "SELECT id FROM problems WHERE id = ANY(%s)", (ids,)
+    )
+    return {r["id"] for r in rows}
+
+
 async def user_can_see_problem(
     conn: AsyncConnection, user_id: int, problem_id: int
 ) -> bool:

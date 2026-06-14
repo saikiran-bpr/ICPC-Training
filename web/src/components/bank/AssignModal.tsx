@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api"
 export type AssignTarget =
   | { kind: "problem"; id: number; label: string }
   | { kind: "contest"; id: number; label: string }
+  | { kind: "problems"; ids: number[]; label: string }
 
 export function AssignModal({
   open,
@@ -49,10 +50,16 @@ export function AssignModal({
       }
       if (target.kind === "problem") {
         await bankService.assignProblem(target.id, payload)
+      } else if (target.kind === "problems") {
+        await bankService.batchAssign({ problem_ids: target.ids, ...payload })
       } else {
         await contestsService.assign(target.id, payload)
       }
-      toast.success("Assigned")
+      toast.success(
+        target.kind === "problems"
+          ? `Assigned ${target.ids.length} problems`
+          : "Assigned",
+      )
       onAssigned?.()
       onClose()
     } catch (e) {
@@ -66,7 +73,13 @@ export function AssignModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={target?.kind === "contest" ? "Assign contest" : "Assign problem"}
+      title={
+        target?.kind === "contest"
+          ? "Assign contest"
+          : target?.kind === "problems"
+            ? "Assign problems"
+            : "Assign problem"
+      }
       size="sm"
       footer={
         <>
@@ -113,7 +126,9 @@ export function AssignModal({
         <p className="form-hint">
           {target?.kind === "contest"
             ? "Every problem in the contest will be assigned to the chosen users/teams."
-            : "The problem is added to the chosen users/teams; the bank entry stays."}
+            : target?.kind === "problems"
+              ? "The selected problems are added to the chosen users/teams; the bank entries stay."
+              : "The problem is added to the chosen users/teams; the bank entry stays."}
         </p>
       </div>
     </Modal>

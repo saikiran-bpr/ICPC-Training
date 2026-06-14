@@ -6,6 +6,16 @@ export type BankAssignInput = {
   assigned_team_ids?: number[]
 }
 
+export type BankBatchAssignInput = BankAssignInput & {
+  problem_ids: number[]
+}
+
+export type BankBatchAssignResult = {
+  problems_assigned: number
+  users_assigned: number
+  teams_assigned: number
+}
+
 export const bankService = {
   listProblems: (
     filters: ProblemFilters,
@@ -18,4 +28,8 @@ export const bankService = {
 
   assignProblem: (id: number, data: BankAssignInput) =>
     api.post<unknown>(`/bank/problems/${id}/assign`, data),
+
+  // Batch-assign several bank problems to users/teams in one call.
+  batchAssign: (data: BankBatchAssignInput) =>
+    api.post<BankBatchAssignResult>("/bank/problems/assign", data),
 }

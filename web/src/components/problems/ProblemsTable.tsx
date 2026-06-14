@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { Pill } from "@/components/common/Pill"
 import { Tag } from "@/components/common/Tag"
-import { AITutorialCell } from "@/components/tutorials/AITutorialCell"
 import type { Problem, TeamSummary, TeamMemberAttempt } from "@/types/problem"
 import type { UserRole } from "@/types/user"
 
@@ -19,7 +18,7 @@ type Props = {
  */
 export function ProblemsTable({ problems, role, onAttempt }: Props) {
   const isCoach = role === "Coach" || role === "Admin"
-  const colCount = isCoach ? 9 : 13
+  const colCount = isCoach ? 8 : 13
 
   return (
     <div
@@ -37,10 +36,7 @@ export function ProblemsTable({ problems, role, onAttempt }: Props) {
             <th>Tags</th>
             <th>Importance</th>
             {isCoach ? (
-              <>
-                <th>Solved</th>
-                <th>AI Tutorial</th>
-              </>
+              <th>Solved</th>
             ) : (
               <>
                 <th>Assigned By</th>
@@ -216,9 +212,6 @@ function CoachRow({ p, colCount }: { p: Problem; colCount: number }) {
               {totals.solved} / {totals.total || "—"}
             </span>
           </div>
-        </td>
-        <td onClick={(e) => e.stopPropagation()}>
-          <AITutorialCell problemId={p.id} />
         </td>
       </tr>
       {expanded && (

@@ -185,6 +185,22 @@ class BulkCreateResult(BaseModel):
     errors: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class BatchAssignIn(BaseModel):
+    """Batch bank → users/teams assignment body.  Assigns every problem in
+    `problem_ids` to the given users/teams in one call.  Caller must provide at
+    least one problem id and at least one assignment target."""
+
+    problem_ids: list[int] = Field(default_factory=list)
+    assigned_user_ids: list[int] = Field(default_factory=list)
+    assigned_team_ids: list[int] = Field(default_factory=list)
+
+
+class BatchAssignResult(BaseModel):
+    problems_assigned: int
+    users_assigned: int
+    teams_assigned: int
+
+
 # ---------------------------------------------------------------------------
 # Query params for GET /api/problems and /api/bank/problems
 # ---------------------------------------------------------------------------

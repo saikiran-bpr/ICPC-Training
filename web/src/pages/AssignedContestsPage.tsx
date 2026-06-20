@@ -1,244 +1,403 @@
-import { useState } from "react"
-import { toast } from "sonner"
+import { useMemo, useState } from "react"
 import { useFetch } from "@/hooks/useFetch"
 import { contestsService } from "@/services/contests"
+import { metaService } from "@/services/meta"
 import { useAuth } from "@/contexts/AuthContext"
-import { ContestCard } from "@/components/contests/ContestCard"
+import { ReflectionModal } from "@/components/contests/ReflectionModal"
+import {
+  ContestFiltersSidebar,
+  type ContestFilters,
+} from "@/components/contests/ContestFiltersSidebar"
 import { Pill } from "@/components/common/Pill"
 import { Tag } from "@/components/common/Tag"
-import { AttemptModal } from "@/components/problems/AttemptModal"
-import { ApiError } from "@/lib/api"
-import type { AssignedContest, ContestWithProblems } from "@/types/contest"
-import type { Problem } from "@/types/problem"
+import type {
+  AssignedContest,
+  ContestMemberEntry,
+  ContestTeamBreakdown,
+  MemberStatus,
+} from "@/types/contest"
+
+const STATUS_PILL: Record<MemberStatus, string> = {
+  "Not started": "Todo",
+  Attempted: "In Progress",
+  Completed: "Done",
+}
+
+function formatDuration(minutes: number | null): string {
+  if (minutes == null) return "—"
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h && m) return `${h}h ${m}m`
+  if (h) return `${h}h`
+  return `${m}m`
+}
+
+function earliestDue(c: AssignedContest): string | null {
+  const dates = (c.assigned_teams ?? [])
+    .map((t) => t.due_date)
+    .filter((d): d is string => !!d)
+  if (dates.length === 0) return null
+  return dates.sort()[0]
+}
 
 export function AssignedContestsPage() {
-  const { role } = useAuth()
-  const canGenerate = role === "Admin" || role === "Coach"
+  const { user, role } = useAuth()
+  const isStaff = role === "Admin" || role === "Coach"
+  const colCount = isStaff ? 7 : 9
+
+  const [searchInput, setSearchInput] = useState("")
+  const [query, setQuery] = useState("")
+  const [filters, setFilters] = useState<ContestFilters>({})
+  const [listReloadTick, setListReloadTick] = useState(0)
+
+  const meta = useFetch((signal) => metaService.get({ signal }), [])
 
   const { data, isLoading, error } = useFetch(
     (signal) => contestsService.listAssigned({ signal }),
-    [],
+    [listReloadTick],
   )
 
-  const [expanded, setExpanded] = useState<Set<number>>(new Set())
-  const [attempt, setAttempt] = useState<Problem | null>(null)
-  const [contestReloadTick, setContestReloadTick] = useState(0)
+  const [reflectFor, setReflectFor] = useState<AssignedContest | null>(null)
+  const [myEntry, setMyEntry] = useState<ContestMemberEntry | null>(null)
 
-  function toggle(id: number) {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
+  const filtered = useMemo(() => {
+    if (!data) return []
+    const q = query.trim().toLowerCase()
+    return data.filter((c) => {
+      if (
+        q &&
+        !c.name.toLowerCase().includes(q) &&
+        !(c.platform ?? "").toLowerCase().includes(q)
+      )
+        return false
+      if (filters.platform?.length && !filters.platform.includes(c.platform ?? ""))
+        return false
+      if (
+        filters.contest_type?.length &&
+        !filters.contest_type.includes(c.contest_type ?? "")
+      )
+        return false
+      if (
+        filters.status?.length &&
+        !filters.status.includes(c.my_status ?? "Not started")
+      )
+        return false
+      if (
+        filters.team_id != null &&
+        !(c.assigned_teams ?? []).some((t) => t.id === filters.team_id)
+      )
+        return false
+      return true
     })
-  }
+  }, [data, query, filters])
 
-  async function generateTutorials(c: AssignedContest) {
-    if (!confirm(`Start AI tutorial generation for every problem in "${c.name}"?`)) return
+  async function openReflection(c: AssignedContest) {
+    setReflectFor(c)
+    setMyEntry(null)
     try {
-      const r = await contestsService.generateTutorials(c.id)
-      toast.success(r.message ?? `Queued ${r.queued_count}`)
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Failed")
+      const entries = await contestsService.listEntries(c.id)
+      setMyEntry(entries.find((e) => e.user_id === user?.id) ?? null)
+    } catch {
+      setMyEntry(null)
     }
   }
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4 space-y-4">
-      <div className="page-toolbar">
-        <h1 className="page-h1">Assigned Contests</h1>
-        <span className="text-[12px] text-[color:var(--c-muted)]">
-          {isLoading ? "Loading…" : `${data?.length ?? 0} contests`}
-        </span>
-      </div>
+    <div className="flex h-full min-h-0">
+      <ContestFiltersSidebar
+        meta={meta.data}
+        filters={filters}
+        onChange={setFilters}
+        onClear={() => setFilters({})}
+        role={role}
+      />
 
-      {error && <p className="text-[color:var(--c-red)]">{error}</p>}
-
-      {!isLoading && data?.length === 0 && (
-        <div className="text-center text-[color:var(--c-muted)] py-12">
-          No contests assigned yet.
-        </div>
-      )}
-
-      <div className="card-grid">
-        {data?.map((c) => (
-          <ContestCard
-            key={c.id}
-            contest={c}
-            extraSummary={<ContestProgressSummary c={c} />}
-            footer={
-              <>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => toggle(c.id)}
-                >
-                  {expanded.has(c.id) ? "Hide problems" : "Show problems"}
-                </button>
-                {canGenerate && (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => generateTutorials(c)}
-                  >
-                    Generate AI tutorials
-                  </button>
-                )}
-              </>
-            }
-          />
-        ))}
-      </div>
-
-      {data?.map(
-        (c) =>
-          expanded.has(c.id) && (
-            <ContestProblemsPanel
-              key={`exp-${c.id}-${contestReloadTick}`}
-              contestId={c.id}
-              name={c.name}
-              onAttempt={(p) => setAttempt(p)}
+      <div className="flex-1 min-w-0 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="page-toolbar">
+          <h1 className="page-h1">Assigned Contests</h1>
+          <span className="text-[12px] text-[color:var(--c-muted)]">
+            {isLoading ? "Loading…" : `${filtered.length} contests`}
+          </span>
+          <div className="ml-auto">
+            <input
+              type="text"
+              className="toolbar-input w-[260px]"
+              placeholder="Search by name or platform…"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value)
+                setQuery(e.target.value)
+              }}
             />
-          ),
-      )}
+          </div>
+        </div>
 
-      <AttemptModal
-        open={attempt !== null}
-        onClose={() => setAttempt(null)}
-        problem={attempt}
-        onSaved={() => setContestReloadTick((n) => n + 1)}
+        {error && <p className="text-[color:var(--c-red)]">{error}</p>}
+
+        <div
+          className="rounded-md border overflow-x-auto"
+          style={{ background: "var(--c-panel)", borderColor: "var(--c-border)" }}
+        >
+          <table className="data-table w-full">
+            <thead>
+              <tr>
+                <th>Contest</th>
+                <th>Platform</th>
+                <th>Year</th>
+                <th>Stars</th>
+                <th>Length</th>
+                <th>Due</th>
+                {isStaff ? (
+                  <th>Teams</th>
+                ) : (
+                  <>
+                    <th>Solved</th>
+                    <th>My status</th>
+                    <th></th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={colCount} className="empty-cell">
+                    Loading…
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={colCount} className="empty-cell">
+                    No contests assigned yet.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((c) => (
+                  <ContestRow
+                    key={c.id}
+                    c={c}
+                    isStaff={isStaff}
+                    colCount={colCount}
+                    onEditReflection={() => openReflection(c)}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ReflectionModal
+        open={reflectFor !== null}
+        onClose={() => setReflectFor(null)}
+        contestId={reflectFor?.id ?? null}
+        contestName={reflectFor?.name ?? ""}
+        initial={myEntry}
+        onSaved={() => setListReloadTick((n) => n + 1)}
       />
     </div>
   )
 }
 
-function ContestProgressSummary({ c }: { c: AssignedContest }) {
-  const total = c.problem_count
+function ContestRow({
+  c,
+  isStaff,
+  colCount,
+  onEditReflection,
+}: {
+  c: AssignedContest
+  isStaff: boolean
+  colCount: number
+  onEditReflection: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const due = earliestDue(c)
+
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[12px]">
-      <span className="text-[color:var(--c-muted)]">Solved</span>
-      <Pill value="Done">
-        {c.my_solved}/{total || "—"}
-      </Pill>
-      {c.during_count > 0 && <Pill value="Done">during {c.during_count}</Pill>}
-      {c.upsolve_count > 0 && (
-        <Pill value="Upsolve">upsolve {c.upsolve_count}</Pill>
+    <>
+      <tr className="cursor-pointer" onClick={() => setExpanded((v) => !v)}>
+        <td>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[color:var(--c-muted)] text-[11px]">
+              {expanded ? "▾" : "▸"}
+            </span>
+            {c.url ? (
+              <a
+                href={c.url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[color:var(--c-accent)] hover:underline truncate max-w-[260px]"
+              >
+                {c.name}
+              </a>
+            ) : (
+              <span className="truncate max-w-[260px]">{c.name}</span>
+            )}
+          </div>
+          {c.contest_type && (
+            <div className="text-[11px] text-[color:var(--c-muted)] ml-[18px]">
+              {c.contest_type}
+            </div>
+          )}
+        </td>
+        <td className="text-[12px]">{c.platform ?? "—"}</td>
+        <td className="text-[12px]">{c.contest_year ?? "—"}</td>
+        <td>
+          {c.stars != null ? (
+            <span
+              className="text-[color:var(--c-amber)] text-[12px]"
+              title={`${c.stars} stars`}
+            >
+              {"★".repeat(c.stars)}
+            </span>
+          ) : (
+            <span className="text-[color:var(--c-muted)]">—</span>
+          )}
+        </td>
+        <td className="text-[12px]">{formatDuration(c.duration_minutes)}</td>
+        <td className="text-[12px]">
+          {due ? due : <span className="text-[color:var(--c-muted)]">—</span>}
+        </td>
+        {isStaff ? (
+          <td className="text-[12px]">
+            {c.assigned_teams?.length ? (
+              `${c.assigned_teams.length} team${c.assigned_teams.length === 1 ? "" : "s"}`
+            ) : (
+              <span className="text-[color:var(--c-muted)]">—</span>
+            )}
+          </td>
+        ) : (
+          <>
+            <td className="text-[12px]">
+              {c.my_solved_count}
+              {c.problem_count ? `/${c.problem_count}` : ""}
+            </td>
+            <td>
+              <Pill value={STATUS_PILL[c.my_status ?? "Not started"]}>
+                {c.my_status ?? "Not started"}
+              </Pill>
+            </td>
+            <td>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEditReflection()
+                }}
+              >
+                Reflection
+              </button>
+            </td>
+          </>
+        )}
+      </tr>
+      {expanded && (
+        <tr className="expanded-row">
+          <td
+            colSpan={colCount}
+            style={{ background: "var(--c-panel-2)", padding: "14px 16px" }}
+          >
+            <TeamBreakdownBlock contestId={c.id} />
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   )
 }
 
-function ContestProblemsPanel({
-  contestId,
-  name,
-  onAttempt,
-}: {
-  contestId: number
-  name: string
-  onAttempt: (p: Problem) => void
-}) {
-  const { data, isLoading, error } = useFetch<ContestWithProblems>(
-    (signal) => contestsService.get(contestId, { signal }),
+function TeamBreakdownBlock({ contestId }: { contestId: number }) {
+  const { data, isLoading, error } = useFetch<ContestTeamBreakdown[]>(
+    (signal) => contestsService.breakdown(contestId, { signal }),
     [contestId],
   )
 
-  return (
-    <div
-      className="rounded-md border overflow-hidden"
-      style={{ borderColor: "var(--c-border)", background: "var(--c-panel)" }}
-    >
-      <div
-        className="px-4 py-2 text-[12px] font-medium uppercase tracking-wider"
-        style={{
-          color: "var(--c-muted)",
-          background: "var(--c-panel-2)",
-          borderBottom: "1px solid var(--c-border)",
-        }}
-      >
-        {name} — problems
+  if (isLoading)
+    return <div className="text-[color:var(--c-muted)] text-[13px]">Loading…</div>
+  if (error) return <div className="text-[color:var(--c-red)] text-[13px]">{error}</div>
+  if (!data || data.length === 0)
+    return (
+      <div className="text-[color:var(--c-muted)] text-[13px]">
+        No teams assigned.
       </div>
-      {isLoading ? (
-        <div className="p-6 text-[color:var(--c-muted)]">Loading…</div>
-      ) : error ? (
-        <div className="p-6 text-[color:var(--c-red)]">{error}</div>
-      ) : (
-        <table className="data-table w-full">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Rating</th>
-              <th>Topic</th>
-              <th>Status</th>
-              <th>Phase</th>
-              <th>Update</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.problems.map((p, idx) => (
-              <ContestProblemRow
-                key={p.id}
-                p={p}
-                idx={idx}
-                onAttempt={onAttempt}
-              />
-            ))}
-          </tbody>
-        </table>
-      )}
+    )
+
+  return (
+    <div className="space-y-4">
+      {data.map((team) => (
+        <TeamSection key={team.team_id} team={team} />
+      ))}
     </div>
   )
 }
 
-function ContestProblemRow({
-  p,
-  idx,
-  onAttempt,
-}: {
-  p: Problem
-  idx: number
-  onAttempt: (p: Problem) => void
-}) {
-  const letter = String.fromCharCode(65 + idx)
-  const a = p.my_attempt
+function TeamSection({ team }: { team: ContestTeamBreakdown }) {
+  const completed = team.members.filter((m) => m.status === "Completed").length
+  const totalSolved = team.members.reduce((s, m) => s + m.solved_count, 0)
+
   return (
-    <tr>
-      <td className="font-mono text-[12px]">
-        <Tag>{letter}</Tag>
-      </td>
-      <td>
-        <a
-          href={p.url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[color:var(--c-accent)] hover:underline"
+    <div>
+      <div className="flex items-center gap-2.5 mb-1.5">
+        <strong className="text-[13px]">{team.team_name}</strong>
+        <span
+          className={`pill ${
+            completed === team.members.length && team.members.length > 0
+              ? "pill-Done"
+              : completed > 0
+                ? "pill-In-Progress"
+                : "pill-Todo"
+          }`}
         >
-          {p.name}
-        </a>
-      </td>
-      <td>{p.rating ?? "—"}</td>
-      <td>{p.topic ?? "—"}</td>
-      <td>
-        <Pill value={a?.attempt_status ?? "Todo"} />
-      </td>
-      <td>
-        {a?.attempt_phase ? (
-          <Pill value={a.attempt_phase === "During Contest" ? "Done" : "Upsolve"}>
-            {a.attempt_phase}
-          </Pill>
-        ) : (
-          <span className="text-[color:var(--c-muted)]">—</span>
-        )}
-      </td>
-      <td>
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => onAttempt(p)}
-        >
-          Update
-        </button>
-      </td>
-    </tr>
+          {completed}/{team.members.length} completed
+        </span>
+        <span className="text-[11px] text-[color:var(--c-muted)]">
+          {totalSolved} problems solved
+        </span>
+      </div>
+      <table className="data-table w-full" style={{ background: "var(--c-panel)" }}>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Status</th>
+            <th>Solved</th>
+            <th>How it went</th>
+            <th>Mistakes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {team.members.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="text-[color:var(--c-muted)] text-[12px]">
+                No members
+              </td>
+            </tr>
+          ) : (
+            team.members.map((m) => (
+              <tr key={m.user_id}>
+                <td className="text-[13px]">
+                  {m.name}
+                  {m.role_in_team === "Reserve" && <Tag>Reserve</Tag>}
+                </td>
+                <td>
+                  <Pill value={STATUS_PILL[m.status]}>{m.status}</Pill>
+                </td>
+                <td className="text-[12px]">{m.solved_count}</td>
+                <td className="text-[12px] max-w-[280px]">
+                  {m.feedback || (
+                    <span className="text-[color:var(--c-muted)]">—</span>
+                  )}
+                </td>
+                <td className="text-[12px] max-w-[280px]">
+                  {m.mistakes || (
+                    <span className="text-[color:var(--c-muted)]">—</span>
+                  )}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   )
 }

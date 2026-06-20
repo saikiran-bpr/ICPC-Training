@@ -10,8 +10,9 @@ All write bodies are explicitly typed; the bank routers reject unknown fields.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -32,6 +33,7 @@ class ContestAssignedTeam(BaseModel):
     id: int
     name: str
     institution: str | None = None
+    due_date: date | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +61,10 @@ class ContestOut(BaseModel):
     cf_stars: Decimal | float | None = None
     ucup_stars: Decimal | float | None = None
 
+    # Coach-assigned difficulty (3/4/5) + contest length in minutes.
+    stars: int | None = None
+    duration_minutes: int | None = None
+
     created_by: int | None = None
     date_added: datetime | None = None
 
@@ -74,12 +80,14 @@ class ContestWithProblems(ContestOut):
 
 
 class AssignedContestOut(ContestOut):
-    """Adds the viewer-scoped solved/phase rollup."""
+    """Adds the viewer-scoped solved/phase rollup + the viewer's own status."""
 
     my_solved: int = 0
     during_count: int = 0
     upsolve_count: int = 0
     unphased_solved: int = 0
+    my_status: str | None = None
+    my_solved_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +103,8 @@ class ContestCreate(BaseModel):
     contest_year: int | None = None
     url: str | None = None
     notes: str | None = None
+    stars: int | None = Field(default=None, ge=1, le=10)
+    duration_minutes: int | None = Field(default=None, gt=0)
 
 
 class ContestUpdate(BaseModel):
@@ -106,6 +116,8 @@ class ContestUpdate(BaseModel):
     contest_year: int | None = None
     url: str | None = None
     notes: str | None = None
+    stars: int | None = Field(default=None, ge=1, le=10)
+    duration_minutes: int | None = Field(default=None, gt=0)
 
 
 class AddProblemToContestIn(BaseModel):
@@ -121,6 +133,61 @@ class AssignIn(BaseModel):
     assigned_team_ids: list[int] = Field(default_factory=list)
 
 
+class AssignContestIn(BaseModel):
+    """Contest → teams assignment body.  Teams only, with an optional deadline."""
+
+    assigned_team_ids: list[int] = Field(default_factory=list)
+    due_date: date | None = None
+
+
+# ---------------------------------------------------------------------------
+# Per-member contest status + reflection
+# ---------------------------------------------------------------------------
+
+MemberStatus = Literal["Not started", "Attempted", "Completed"]
+
+
+class MemberEntryIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    status: MemberStatus = "Not started"
+    solved_count: int = Field(default=0, ge=0)
+    feedback: str | None = None
+    mistakes: str | None = None
+
+
+class MemberEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    user_name: str
+    status: MemberStatus
+    solved_count: int = 0
+    feedback: str | None = None
+    mistakes: str | None = None
+    updated_at: datetime | None = None
+
+
+class ContestTeamMemberOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    name: str
+    role_in_team: str | None = None
+    status: MemberStatus = "Not started"
+    solved_count: int = 0
+    feedback: str | None = None
+    mistakes: str | None = None
+
+
+class ContestTeamBreakdownOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    team_id: int
+    team_name: str
+    members: list[ContestTeamMemberOut] = Field(default_factory=list)
+
+
 class ContestDeleted(BaseModel):
     deleted: int
 
@@ -132,4 +199,9 @@ class ContestProblemRemoved(BaseModel):
 
 class AssignContestResult(BaseModel):
     contest: ContestOut
-    problems_assigned: int
+    teams_assigned: int
+
+
+class ContestTeamUnassigned(BaseModel):
+    contest_id: int
+    removed_team_id: int

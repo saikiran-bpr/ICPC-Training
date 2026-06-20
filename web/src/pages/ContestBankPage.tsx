@@ -5,9 +5,7 @@ import { contestsService } from "@/services/contests"
 import { useAuth } from "@/contexts/AuthContext"
 import { ContestCard } from "@/components/contests/ContestCard"
 import { ContestModal } from "@/components/contests/ContestModal"
-import { ContestProblemsPanel } from "@/components/contests/ContestProblemsPanel"
 import { AssignModal, type AssignTarget } from "@/components/bank/AssignModal"
-import { Pill } from "@/components/common/Pill"
 import { ApiError } from "@/lib/api"
 import type { ContestSummary } from "@/types/contest"
 
@@ -22,17 +20,6 @@ export function ContestBankPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ContestSummary | null>(null)
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null)
-  const [expanded, setExpanded] = useState<Set<number>>(new Set())
-  const [panelReloadTick, setPanelReloadTick] = useState(0)
-
-  function toggle(id: number) {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   const { data, isLoading, error } = useFetch(
     (signal) => contestsService.listBank({ q: query }, { signal }),
@@ -47,16 +34,6 @@ export function ContestBankPage() {
       await contestsService.remove(c.id)
       toast.success("Contest deleted")
       refresh()
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Failed")
-    }
-  }
-
-  async function generateTutorials(c: ContestSummary) {
-    if (!confirm(`Start AI tutorial generation for every problem in "${c.name}"?`)) return
-    try {
-      const r = await contestsService.generateTutorials(c.id)
-      toast.success(r.message ?? `Queued ${r.queued_count} problems`)
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Failed")
     }
@@ -108,22 +85,9 @@ export function ContestBankPage() {
           <ContestCard
             key={c.id}
             contest={c}
-            extraSummary={
-              <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                <Pill value={c.bank_problem_count > 0 ? "Todo" : "Done"}>
-                  {c.problem_count} problem{c.problem_count === 1 ? "" : "s"}
-                </Pill>
-              </div>
-            }
+            showAssignedTo={false}
             footer={
               <>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => toggle(c.id)}
-                >
-                  {expanded.has(c.id) ? "Hide problems" : "Open"}
-                </button>
                 <button
                   type="button"
                   className="btn btn-sm"
@@ -144,7 +108,7 @@ export function ContestBankPage() {
                     Go to contest ↗
                   </a>
                 )}
-                {c.problem_count > 0 && (
+                {canManage && (
                   <button
                     type="button"
                     className="btn btn-sm btn-primary"
@@ -155,13 +119,6 @@ export function ContestBankPage() {
                     Assign contest
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => generateTutorials(c)}
-                >
-                  Generate AI tutorials
-                </button>
                 {canDelete && (
                   <button
                     type="button"
@@ -177,23 +134,6 @@ export function ContestBankPage() {
         ))}
       </div>
 
-      {data?.map(
-        (c) =>
-          expanded.has(c.id) && (
-            <ContestProblemsPanel
-              key={`exp-${c.id}`}
-              contestId={c.id}
-              name={c.name}
-              canManage={canManage}
-              reloadKey={panelReloadTick}
-              onAssignProblem={(p) =>
-                setAssignTarget({ kind: "problem", id: p.id, label: p.name })
-              }
-              onReload={() => setPanelReloadTick((n) => n + 1)}
-            />
-          ),
-      )}
-
       <ContestModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -204,10 +144,7 @@ export function ContestBankPage() {
         open={assignTarget !== null}
         onClose={() => setAssignTarget(null)}
         target={assignTarget}
-        onAssigned={() => {
-          refresh()
-          setPanelReloadTick((n) => n + 1)
-        }}
+        onAssigned={refresh}
       />
     </div>
   )

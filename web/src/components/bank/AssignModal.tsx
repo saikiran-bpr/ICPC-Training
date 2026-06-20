@@ -26,18 +26,45 @@ export function AssignModal({
   target: AssignTarget | null
   onAssigned?: () => void
 }) {
+  const isContest = target?.kind === "contest"
+
   const [selUsers, setSelUsers] = useState<AsyncMultiSelectItem[]>([])
   const [selTeams, setSelTeams] = useState<AsyncMultiSelectItem[]>([])
+  const [dueDate, setDueDate] = useState("")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setSelUsers([])
     setSelTeams([])
+    setDueDate("")
   }, [open, target])
 
   async function onSubmit() {
     if (!target) return
+
+    if (isContest) {
+      if (selTeams.length === 0) {
+        toast.error("Pick at least one team")
+        return
+      }
+      setSaving(true)
+      try {
+        await contestsService.assign(target.id, {
+          assigned_team_ids: selTeams.map((t) => t.id),
+          due_date: dueDate || null,
+        })
+        toast.success("Contest assigned")
+        onAssigned?.()
+        onClose()
+      } catch (e) {
+        toast.error(e instanceof ApiError ? e.message : "Assign failed")
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
     if (selUsers.length === 0 && selTeams.length === 0) {
       toast.error("Pick at least one contestant or team")
       return
@@ -50,10 +77,8 @@ export function AssignModal({
       }
       if (target.kind === "problem") {
         await bankService.assignProblem(target.id, payload)
-      } else if (target.kind === "problems") {
-        await bankService.batchAssign({ problem_ids: target.ids, ...payload })
       } else {
-        await contestsService.assign(target.id, payload)
+        await bankService.batchAssign({ problem_ids: target.ids, ...payload })
       }
       toast.success(
         target.kind === "problems"
@@ -74,7 +99,7 @@ export function AssignModal({
       open={open}
       onClose={onClose}
       title={
-        target?.kind === "contest"
+        isContest
           ? "Assign contest"
           : target?.kind === "problems"
             ? "Assign problems"
@@ -103,16 +128,18 @@ export function AssignModal({
         </p>
       )}
       <div className="space-y-3">
-        <div>
-          <label className="form-label">Assign to contestants</label>
-          <AsyncMultiSelect
-            selected={selUsers}
-            onChange={setSelUsers}
-            search={searchContestants}
-            placeholder="Search contestants by name or handle…"
-            emptyMessage="No contestants found"
-          />
-        </div>
+        {!isContest && (
+          <div>
+            <label className="form-label">Assign to contestants</label>
+            <AsyncMultiSelect
+              selected={selUsers}
+              onChange={setSelUsers}
+              search={searchContestants}
+              placeholder="Search contestants by name or handle…"
+              emptyMessage="No contestants found"
+            />
+          </div>
+        )}
         <div>
           <label className="form-label">Assign to teams</label>
           <AsyncMultiSelect
@@ -123,9 +150,20 @@ export function AssignModal({
             emptyMessage="No teams found"
           />
         </div>
+        {isContest && (
+          <div>
+            <label className="form-label">Due date (optional)</label>
+            <input
+              type="date"
+              className="form-control"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+        )}
         <p className="form-hint">
-          {target?.kind === "contest"
-            ? "Every problem in the contest will be assigned to the chosen users/teams."
+          {isContest
+            ? "The contest is assigned to the chosen teams. Members will see it under Assigned Contests."
             : target?.kind === "problems"
               ? "The selected problems are added to the chosen users/teams; the bank entries stay."
               : "The problem is added to the chosen users/teams; the bank entry stays."}

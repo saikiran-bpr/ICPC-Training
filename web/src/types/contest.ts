@@ -10,6 +10,35 @@ export type ContestAssignedTeam = {
   id: number
   name: string
   institution?: string | null
+  due_date?: string | null
+}
+
+export type MemberStatus = "Not started" | "Attempted" | "Completed"
+
+export type ContestMemberEntry = {
+  user_id: number
+  user_name: string
+  status: MemberStatus
+  solved_count: number
+  feedback: string | null
+  mistakes: string | null
+  updated_at: string | null
+}
+
+export type ContestTeamMember = {
+  user_id: number
+  name: string
+  role_in_team: string | null
+  status: MemberStatus
+  solved_count: number
+  feedback: string | null
+  mistakes: string | null
+}
+
+export type ContestTeamBreakdown = {
+  team_id: number
+  team_name: string
+  members: ContestTeamMember[]
 }
 
 export type ContestSummary = {
@@ -25,6 +54,8 @@ export type ContestSummary = {
   tutorial_lang: string | null
   cf_stars: number | null
   ucup_stars: number | null
+  stars: number | null
+  duration_minutes: number | null
   created_by: number | null
   date_added: string | null
   problem_count: number
@@ -42,4 +73,6 @@ export type AssignedContest = ContestSummary & {
   during_count: number
   upsolve_count: number
   unphased_solved: number
+  my_status: MemberStatus | null
+  my_solved_count: number
 }

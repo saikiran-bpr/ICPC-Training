@@ -15,6 +15,8 @@ type FormShape = {
   contest_year: string
   url: string
   notes: string
+  stars: string
+  duration_minutes: string
 }
 
 export function ContestModal({
@@ -39,6 +41,8 @@ export function ContestModal({
       contest_year: "",
       url: "",
       notes: "",
+      stars: "",
+      duration_minutes: "",
     },
   })
 
@@ -51,6 +55,9 @@ export function ContestModal({
         contest_year: initial?.contest_year != null ? String(initial.contest_year) : "",
         url: initial?.url ?? "",
         notes: initial?.notes ?? "",
+        stars: initial?.stars != null ? String(initial.stars) : "",
+        duration_minutes:
+          initial?.duration_minutes != null ? String(initial.duration_minutes) : "",
       })
     }
   }, [open, initial, reset])
@@ -65,6 +72,10 @@ export function ContestModal({
         contest_year: values.contest_year ? Number(values.contest_year) : null,
         url: values.url.trim() || null,
         notes: values.notes.trim() || null,
+        stars: values.stars ? Number(values.stars) : null,
+        duration_minutes: values.duration_minutes
+          ? Number(values.duration_minutes)
+          : null,
       }
       const saved = initial
         ? await contestsService.update(initial.id, payload)
@@ -144,6 +155,27 @@ export function ContestModal({
           <div>
             <label className="form-label">URL</label>
             <input className="form-control" {...register("url")} />
+          </div>
+          <div>
+            <label className="form-label">Star</label>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              className="form-control"
+              placeholder="1–10"
+              {...register("stars")}
+            />
+          </div>
+          <div>
+            <label className="form-label">Length (minutes)</label>
+            <input
+              type="number"
+              min={1}
+              className="form-control"
+              placeholder="e.g. 300"
+              {...register("duration_minutes")}
+            />
           </div>
         </div>
         <div>

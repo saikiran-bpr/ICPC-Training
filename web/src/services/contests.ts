@@ -1,8 +1,11 @@
 import { api } from "@/lib/api"
 import type {
   AssignedContest,
+  ContestMemberEntry,
   ContestSummary,
+  ContestTeamBreakdown,
   ContestWithProblems,
+  MemberStatus,
 } from "@/types/contest"
 
 export type ContestWrite = {
@@ -12,11 +15,20 @@ export type ContestWrite = {
   contest_year?: number | null
   url?: string | null
   notes?: string | null
+  stars?: number | null
+  duration_minutes?: number | null
 }
 
 export type ContestAssignInput = {
-  assigned_user_ids?: number[]
-  assigned_team_ids?: number[]
+  assigned_team_ids: number[]
+  due_date?: string | null
+}
+
+export type MemberEntryInput = {
+  status: MemberStatus
+  solved_count: number
+  feedback?: string | null
+  mistakes?: string | null
 }
 
 export const contestsService = {
@@ -48,6 +60,24 @@ export const contestsService = {
 
   assign: (id: number, data: ContestAssignInput) =>
     api.post<unknown>(`/bank/contests/${id}/assign`, data),
+
+  unassignTeam: (id: number, teamId: number) =>
+    api.delete<{ contest_id: number; removed_team_id: number }>(
+      `/bank/contests/${id}/teams/${teamId}`,
+    ),
+
+  listEntries: (id: number, opts?: { signal?: AbortSignal }) =>
+    api.get<ContestMemberEntry[]>(`/contests/${id}/entries`, {
+      signal: opts?.signal,
+    }),
+
+  breakdown: (id: number, opts?: { signal?: AbortSignal }) =>
+    api.get<ContestTeamBreakdown[]>(`/contests/${id}/breakdown`, {
+      signal: opts?.signal,
+    }),
+
+  saveEntry: (id: number, data: MemberEntryInput) =>
+    api.put<ContestMemberEntry>(`/contests/${id}/entry`, data),
 
   removeProblem: (id: number, pid: number) =>
     api.delete<{ ok: true }>(`/bank/contests/${id}/problems/${pid}`),

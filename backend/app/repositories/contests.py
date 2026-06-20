@@ -195,7 +195,7 @@ async def hydrate_many(
     team_rows = await fetch_all(
         conn,
         """
-        SELECT ct.contest_id, t.id, t.name, t.institution
+        SELECT ct.contest_id, t.id, t.name, t.institution, ct.due_date
         FROM contest_teams ct
         JOIN teams t ON t.id = ct.team_id
         WHERE ct.contest_id = ANY(%s)
@@ -206,7 +206,12 @@ async def hydrate_many(
     teams_by_cid: dict[int, list[dict[str, Any]]] = {cid: [] for cid in cids}
     for t in team_rows:
         teams_by_cid[t["contest_id"]].append(
-            {"id": t["id"], "name": t["name"], "institution": t["institution"]}
+            {
+                "id": t["id"],
+                "name": t["name"],
+                "institution": t["institution"],
+                "due_date": t["due_date"],
+            }
         )
 
     out: list[dict[str, Any]] = []
@@ -383,15 +388,28 @@ async def insert(
     contest_year: int | None,
     url: str | None,
     notes: str | None,
+    stars: int | None,
+    duration_minutes: int | None,
     created_by: int,
 ) -> int:
     cur = await conn.execute(
         """
-        INSERT INTO contests (name, platform, contest_type, contest_year, url, notes, created_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO contests
+            (name, platform, contest_type, contest_year, url, notes, stars, duration_minutes, created_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """,
-        (name, platform, contest_type, contest_year, url, notes, created_by),
+        (
+            name,
+            platform,
+            contest_type,
+            contest_year,
+            url,
+            notes,
+            stars,
+            duration_minutes,
+            created_by,
+        ),
     )
     row = await cur.fetchone()
     assert row is not None
@@ -399,7 +417,16 @@ async def insert(
 
 
 _CONTEST_EDITABLE = frozenset(
-    {"name", "platform", "contest_type", "contest_year", "url", "notes"}
+    {
+        "name",
+        "platform",
+        "contest_type",
+        "contest_year",
+        "url",
+        "notes",
+        "stars",
+        "duration_minutes",
+    }
 )
 
 
@@ -476,15 +503,47 @@ async def add_contest_users(
 
 
 async def add_contest_teams(
-    conn: AsyncConnection, cid: int, team_ids: list[int]
+    conn: AsyncConnection,
+    cid: int,
+    team_ids: list[int],
+    due_date: Any | None = None,
+    assigned_by: int | None = None,
 ) -> None:
     if not team_ids:
         return
     await conn.cursor().executemany(
-        "INSERT INTO contest_teams (contest_id, team_id) VALUES (%s, %s) "
-        "ON CONFLICT DO NOTHING",
-        [(cid, tid) for tid in team_ids],
+        """
+        INSERT INTO contest_teams (contest_id, team_id, due_date, assigned_by)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (contest_id, team_id)
+            DO UPDATE SET due_date = EXCLUDED.due_date,
+                          assigned_by = EXCLUDED.assigned_by
+        """,
+        [(cid, tid, due_date, assigned_by) for tid in team_ids],
     )
+
+
+async def assign_contest_to_teams(
+    conn: AsyncConnection,
+    cid: int,
+    team_ids: list[int],
+    due_date: Any | None = None,
+    assigned_by: int | None = None,
+) -> int:
+    """Assign a contest to whole teams (contest-level only — no per-problem
+    fan-out).  `contest_teams` is the single source of truth for who's
+    assigned.  Returns the number of teams processed."""
+    await add_contest_teams(conn, cid, team_ids, due_date, assigned_by)
+    return len(team_ids)
+
+
+async def unassign_team(conn: AsyncConnection, cid: int, tid: int) -> bool:
+    affected = await execute(
+        conn,
+        "DELETE FROM contest_teams WHERE contest_id = %s AND team_id = %s",
+        (cid, tid),
+    )
+    return affected > 0
 
 
 # ---------------------------------------------------------------------------
@@ -557,44 +616,208 @@ async def assign_bank_problems_batch(
         )
 
 
-async def assign_contest_problems(
+# ---------------------------------------------------------------------------
+# Per-member contest status + reflections
+# ---------------------------------------------------------------------------
+
+async def upsert_member_entry(
     conn: AsyncConnection,
-    contest_id: int,
-    problem_ids: list[int],
-    user_ids: list[int],
-    team_ids: list[int],
-    assigned_by: int | None = None,
-) -> int:
-    """Bulk-assign every problem in `problem_ids` to the given users/teams
-    with via_contest = 1.  ON CONFLICT DO NOTHING preserves any pre-existing
-    direct (via_contest = 0) row — manual assignments are 'stronger'.
+    cid: int,
+    uid: int,
+    *,
+    status: str,
+    solved_count: int,
+    feedback: str | None,
+    mistakes: str | None,
+) -> None:
+    """Create or replace the viewer's own status + reflection for a contest."""
+    await execute(
+        conn,
+        """
+        INSERT INTO contest_member_entries
+            (contest_id, user_id, status, solved_count, feedback, mistakes)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (contest_id, user_id)
+            DO UPDATE SET status = EXCLUDED.status,
+                          solved_count = EXCLUDED.solved_count,
+                          feedback = EXCLUDED.feedback,
+                          mistakes = EXCLUDED.mistakes,
+                          updated_at = now()
+        """,
+        (cid, uid, status, solved_count, feedback, mistakes),
+    )
 
-    Returns the number of problems processed.
-    Skill: data-batch-inserts."""
 
-    if user_ids:
-        pairs = [(pid, uid, assigned_by) for pid in problem_ids for uid in user_ids]
-        await conn.cursor().executemany(
-            """
-            INSERT INTO problem_users (problem_id, user_id, via_contest, assigned_by)
-            VALUES (%s, %s, 1, %s)
-            ON CONFLICT DO NOTHING
-            """,
-            pairs,
+async def my_entry_map(
+    conn: AsyncConnection, cids: list[int], uid: int
+) -> dict[int, dict[str, Any]]:
+    """{contest_id: {status, solved_count}} for the viewer's own entries."""
+    if not cids:
+        return {}
+    rows = await fetch_all(
+        conn,
+        """
+        SELECT contest_id, status, solved_count
+        FROM contest_member_entries
+        WHERE user_id = %s AND contest_id = ANY(%s)
+        """,
+        (uid, cids),
+    )
+    return {
+        r["contest_id"]: {
+            "status": r["status"],
+            "solved_count": r["solved_count"],
+        }
+        for r in rows
+    }
+
+
+async def team_breakdown(
+    conn: AsyncConnection, cid: int, viewer: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Per-team member reflections for a contest — the contest analogue of the
+    Assigned Problems team breakdown.
+
+    Returns [{team_id, team_name, members: [{user_id, name, role_in_team,
+    status, solved_count, feedback, mistakes}]}], scoped by viewer:
+
+      • Admin       — every team the contest is assigned to.
+      • Coach       — assigned teams the coach coaches.
+      • Contestant  — assigned teams the viewer is a member of.
+
+    Every team member is listed (defaulting to 'Not started' / 0 solved) so
+    coaches can see who hasn't reported yet."""
+    role = viewer["role"]
+    uid = viewer["id"]
+
+    if role == "Admin":
+        team_rows = await fetch_all(
+            conn,
+            "SELECT team_id FROM contest_teams WHERE contest_id = %s",
+            (cid,),
         )
-    if team_ids:
-        pairs = [(pid, tid, assigned_by) for pid in problem_ids for tid in team_ids]
-        await conn.cursor().executemany(
+    elif role == "Coach":
+        team_rows = await fetch_all(
+            conn,
             """
-            INSERT INTO problem_teams (problem_id, team_id, via_contest, assigned_by)
-            VALUES (%s, %s, 1, %s)
-            ON CONFLICT DO NOTHING
+            SELECT ct.team_id
+            FROM contest_teams ct
+            JOIN team_coaches tc ON tc.team_id = ct.team_id AND tc.user_id = %s
+            WHERE ct.contest_id = %s
             """,
-            pairs,
+            (uid, cid),
+        )
+    else:  # Contestant
+        team_rows = await fetch_all(
+            conn,
+            """
+            SELECT ct.team_id
+            FROM contest_teams ct
+            JOIN team_members tm ON tm.team_id = ct.team_id AND tm.user_id = %s
+            WHERE ct.contest_id = %s
+            """,
+            (uid, cid),
         )
 
-    # Also record the contest-level assignment so /api/contests/assigned can
-    # surface the contest without re-deriving from junctions.
-    await add_contest_users(conn, contest_id, user_ids)
-    await add_contest_teams(conn, contest_id, team_ids)
-    return len(problem_ids)
+    team_ids = [r["team_id"] for r in team_rows]
+    if not team_ids:
+        return []
+
+    rows = await fetch_all(
+        conn,
+        """
+        SELECT t.id AS team_id, t.name AS team_name,
+               u.id AS user_id, u.name AS user_name, tm.role_in_team,
+               COALESCE(cme.status, 'Not started') AS status,
+               COALESCE(cme.solved_count, 0)       AS solved_count,
+               cme.feedback, cme.mistakes
+        FROM teams t
+        JOIN team_members tm ON tm.team_id = t.id
+        JOIN users u ON u.id = tm.user_id
+        LEFT JOIN contest_member_entries cme
+               ON cme.user_id = u.id AND cme.contest_id = %s
+        WHERE t.id = ANY(%s)
+        ORDER BY t.name, tm.role_in_team, u.name
+        """,
+        (cid, team_ids),
+    )
+
+    grouped: dict[int, dict[str, Any]] = {}
+    for r in rows:
+        team = grouped.setdefault(
+            r["team_id"],
+            {"team_id": r["team_id"], "team_name": r["team_name"], "members": []},
+        )
+        team["members"].append(
+            {
+                "user_id": r["user_id"],
+                "name": r["user_name"],
+                "role_in_team": r["role_in_team"],
+                "status": r["status"],
+                "solved_count": r["solved_count"],
+                "feedback": r["feedback"],
+                "mistakes": r["mistakes"],
+            }
+        )
+    return list(grouped.values())
+
+
+async def list_member_entries(
+    conn: AsyncConnection, cid: int, viewer: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """All members' entries for a contest, scoped to what the viewer may see:
+
+      • Admin       — every entry for the contest.
+      • Coach       — entries by members of assigned teams the coach coaches.
+      • Contestant  — entries by teammates on assigned teams they share (incl.
+                      themselves).
+    """
+    role = viewer["role"]
+    uid = viewer["id"]
+
+    base = """
+        SELECT cme.user_id, u.name AS user_name, cme.status,
+               cme.solved_count, cme.feedback, cme.mistakes, cme.updated_at
+        FROM contest_member_entries cme
+        JOIN users u ON u.id = cme.user_id
+        WHERE cme.contest_id = %s
+    """
+
+    if role == "Admin":
+        return await fetch_all(conn, base + " ORDER BY u.name", (cid,))
+
+    if role == "Coach":
+        return await fetch_all(
+            conn,
+            base
+            + """
+              AND cme.user_id IN (
+                  SELECT tm.user_id
+                  FROM contest_teams ct
+                  JOIN team_coaches tc
+                       ON tc.team_id = ct.team_id AND tc.user_id = %s
+                  JOIN team_members tm ON tm.team_id = ct.team_id
+                  WHERE ct.contest_id = %s
+              )
+              ORDER BY u.name
+            """,
+            (cid, uid, cid),
+        )
+
+    # Contestant — teammates on shared assigned teams (includes self).
+    return await fetch_all(
+        conn,
+        base
+        + """
+          AND cme.user_id IN (
+              SELECT tm.user_id
+              FROM contest_teams ct
+              JOIN team_members mine
+                   ON mine.team_id = ct.team_id AND mine.user_id = %s
+              JOIN team_members tm ON tm.team_id = ct.team_id
+              WHERE ct.contest_id = %s
+          )
+          ORDER BY u.name
+        """,
+        (cid, uid, cid),
+    )

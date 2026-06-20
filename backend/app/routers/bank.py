@@ -18,18 +18,21 @@ from app.deps import (
     CurrentUser,
     RequireAdmin,
     RequireCoachOrAdmin,
+    can_manage_team,
 )
 from app.errors import bad_request, conflict, not_found
 from app.repositories import contests as contests_repo
 from app.repositories import problems as problems_repo
 from app.schemas.contest import (
     AddProblemToContestIn,
+    AssignContestIn,
     AssignContestResult,
     AssignIn,
     ContestCreate,
     ContestDeleted,
     ContestOut,
     ContestProblemRemoved,
+    ContestTeamUnassigned,
     ContestUpdate,
     ContestWithProblems,
 )
@@ -210,6 +213,8 @@ async def create_contest(
         contest_year=payload.contest_year,
         url=(payload.url or "").strip() or None,
         notes=(payload.notes or "").strip() or None,
+        stars=payload.stars,
+        duration_minutes=payload.duration_minutes,
         created_by=me["id"],
     )
     row = await contests_repo.get_by_id(conn, cid)
@@ -290,7 +295,7 @@ async def remove_problem_from_contest(
     return ContestProblemRemoved(contest_id=cid, removed_problem_id=pid)
 
 
-# --- Bulk-assign every problem in a contest ---------------------------------
+# --- Assign / unassign a contest to whole teams -----------------------------
 
 @router.post(
     "/contests/{cid}/assign",
@@ -300,38 +305,54 @@ async def assign_contest(
     me: RequireCoachOrAdmin,
     conn: ConnDep,
     cid: Annotated[int, Path(ge=1)],
-    payload: AssignIn,
+    payload: AssignContestIn,
 ) -> dict:
-    """legacy: 1998-2061.  Each contest-problem gets a junction row with
-    via_contest = 1, except when a manual via_contest = 0 row already exists
-    (ON CONFLICT DO NOTHING preserves it)."""
+    """Assign a contest to whole teams, with an optional due date.
+
+    Contest-level only — `contest_teams` is the single source of truth (no
+    per-problem fan-out).  A Coach may only assign to teams they coach; an
+    Admin to any team.  Re-assigning a team updates its due date."""
     if await contests_repo.get_by_id(conn, cid) is None:
         raise not_found()
-    if not payload.assigned_user_ids and not payload.assigned_team_ids:
-        raise bad_request(
-            "Provide at least one assigned_user_ids or assigned_team_ids"
-        )
+    if not payload.assigned_team_ids:
+        raise bad_request("Provide at least one team in assigned_team_ids")
     try:
         await problems_repo.validate_assignment_targets(
-            conn, payload.assigned_user_ids, payload.assigned_team_ids, me
+            conn, [], payload.assigned_team_ids, me
         )
     except ValueError as e:
         raise bad_request(str(e)) from e
 
-    pids = await contests_repo.get_problem_ids_in_contest(conn, cid)
-    if not pids:
-        raise conflict("Contest has no problems")
-
-    affected = await contests_repo.assign_contest_problems(
+    teams_assigned = await contests_repo.assign_contest_to_teams(
         conn,
         cid,
-        pids,
-        payload.assigned_user_ids,
         payload.assigned_team_ids,
+        payload.due_date,
         me["id"],
     )
 
     row = await contests_repo.get_by_id(conn, cid)
     assert row is not None
     contest_out = (await contests_repo.hydrate_many(conn, [row]))[0]
-    return {"contest": contest_out, "problems_assigned": affected}
+    return {"contest": contest_out, "teams_assigned": teams_assigned}
+
+
+@router.delete(
+    "/contests/{cid}/teams/{tid}",
+    response_model=ContestTeamUnassigned,
+)
+async def unassign_contest_team(
+    me: RequireCoachOrAdmin,
+    conn: ConnDep,
+    cid: Annotated[int, Path(ge=1)],
+    tid: Annotated[int, Path(ge=1)],
+) -> ContestTeamUnassigned:
+    """Remove a team's assignment to a contest.  A Coach may only unassign
+    teams they coach; an Admin any team."""
+    if await contests_repo.get_by_id(conn, cid) is None:
+        raise not_found()
+    if not await can_manage_team(conn, tid, me):
+        raise bad_request("You can only unassign teams you coach")
+    if not await contests_repo.unassign_team(conn, cid, tid):
+        raise not_found("Team is not assigned to this contest")
+    return ContestTeamUnassigned(contest_id=cid, removed_team_id=tid)

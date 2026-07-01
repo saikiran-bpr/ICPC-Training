@@ -94,6 +94,13 @@ export function LoginPage() {
             Create an account
           </Link>
         </p>
+
+        <p className="pt-5">Test Admin Email: admin@example.com</p>
+        <p>Test Admin Password: admin@123</p>
+        <p className="pt-2">Test Coach Email: coach@example.com</p>
+        <p>Test Coach Password: coach@123</p>
+        <p className="pt-2">Test Contestant Email: user@example.com</p>
+        <p>Test Contestant Password: user@123</p>
       </div>
     </div>
   )

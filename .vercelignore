@@ -13,7 +13,6 @@ __pycache__/
 .venv/
 backend/*.egg-info/
 
-# Frontend build artifacts (Vercel rebuilds from source)
+# Frontend source noise (NOT web/dist — that's the build output Vercel serves!)
 web/node_modules/
-web/dist/
 web/.vite/

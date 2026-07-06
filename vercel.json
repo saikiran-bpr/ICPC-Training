@@ -16,7 +16,7 @@
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/files/(.*)", "dest": "/api/index.py" },
     { "src": "/healthz", "dest": "/api/index.py" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/(.*\\.[a-zA-Z0-9]+)", "dest": "/web/$1" },
+    { "src": "/(.*)", "dest": "/web/index.html" }
   ]
 }

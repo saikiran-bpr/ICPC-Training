@@ -324,6 +324,118 @@
     text-decoration: underline;
   }
 
+  /* ---- Demo credentials panel (login page) ---------------------------- */
+  .demo-creds {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--c-border);
+  }
+  .demo-creds-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .demo-creds-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--c-muted);
+  }
+  .demo-creds-hint {
+    font-size: 11px;
+    color: var(--c-muted);
+    opacity: 0.8;
+  }
+  .demo-creds-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .demo-cred {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: var(--c-panel-2);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease,
+      transform 0.06s ease;
+  }
+  .demo-cred:hover:not(:disabled) {
+    border-color: var(--c-accent);
+    background: color-mix(in srgb, var(--c-accent) 8%, var(--c-panel-2));
+  }
+  .demo-cred:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .demo-cred:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .demo-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid transparent;
+  }
+  .demo-badge--admin {
+    color: var(--c-red);
+    background: color-mix(in srgb, var(--c-red) 14%, transparent);
+    border-color: color-mix(in srgb, var(--c-red) 35%, transparent);
+  }
+  .demo-badge--coach {
+    color: var(--c-amber);
+    background: color-mix(in srgb, var(--c-amber) 14%, transparent);
+    border-color: color-mix(in srgb, var(--c-amber) 35%, transparent);
+  }
+  .demo-badge--contestant {
+    color: var(--c-green);
+    background: color-mix(in srgb, var(--c-green) 14%, transparent);
+    border-color: color-mix(in srgb, var(--c-green) 35%, transparent);
+  }
+  .demo-cred-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+  }
+  .demo-cred-email {
+    font-size: 12.5px;
+    color: var(--c-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .demo-cred-pass {
+    font-size: 11.5px;
+    color: var(--c-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .demo-cred-go {
+    flex-shrink: 0;
+    color: var(--c-muted);
+    font-size: 16px;
+    transition: color 0.12s ease, transform 0.12s ease;
+  }
+  .demo-cred:hover:not(:disabled) .demo-cred-go {
+    color: var(--c-accent);
+    transform: translateX(2px);
+  }
+
   /* ---- Card grid + card (Teams, Contests, Bank) ----------------------- */
   .card-grid {
     display: grid;

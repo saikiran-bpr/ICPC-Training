@@ -1,0 +1,19 @@
+# Keep the deploy small — none of this is needed to build/run on Vercel.
+legacy/
+static/
+docs/
+render.yaml
+.env
+.env.*
+!.env.example
+
+# Python noise
+__pycache__/
+*.py[cod]
+.venv/
+backend/*.egg-info/
+
+# Frontend build artifacts (Vercel rebuilds from source)
+web/node_modules/
+web/dist/
+web/.vite/

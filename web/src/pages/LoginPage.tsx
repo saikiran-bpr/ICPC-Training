@@ -5,6 +5,12 @@ import type { LoginInput } from "@/types/auth"
 import { useAuth } from "@/contexts/AuthContext"
 import { ApiError } from "@/lib/api"
 
+const DEMO_ACCOUNTS = [
+  { role: "Admin", email: "admin@example.com", password: "admin@123" },
+  { role: "Coach", email: "coach@example.com", password: "coach@123" },
+  { role: "Contestant", email: "user@example.com", password: "user@123" },
+] as const
+
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -16,6 +22,7 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
     defaultValues: { email: "", password: "" },
@@ -31,6 +38,12 @@ export function LoginPage() {
         err instanceof ApiError ? err.message : "Login failed. Try again."
       toast.error(msg)
     }
+  }
+
+  async function quickLogin(acct: (typeof DEMO_ACCOUNTS)[number]) {
+    setValue("email", acct.email)
+    setValue("password", acct.password)
+    await onSubmit({ email: acct.email, password: acct.password })
   }
 
   return (
@@ -95,12 +108,36 @@ export function LoginPage() {
           </Link>
         </p>
 
-        <p className="pt-5">Test Admin Email: admin@example.com</p>
-        <p>Test Admin Password: admin@123</p>
-        <p className="pt-2">Test Coach Email: coach@example.com</p>
-        <p>Test Coach Password: coach@123</p>
-        <p className="pt-2">Test Contestant Email: user@example.com</p>
-        <p>Test Contestant Password: user@123</p>
+        <div className="demo-creds">
+          <div className="demo-creds-head">
+            <span className="demo-creds-title">Demo accounts</span>
+            <span className="demo-creds-hint">click a role to sign in</span>
+          </div>
+          <div className="demo-creds-list">
+            {DEMO_ACCOUNTS.map((acct) => (
+              <button
+                key={acct.role}
+                type="button"
+                className="demo-cred"
+                onClick={() => quickLogin(acct)}
+                disabled={isSubmitting}
+              >
+                <span
+                  className={`demo-badge demo-badge--${acct.role.toLowerCase()}`}
+                >
+                  {acct.role}
+                </span>
+                <span className="demo-cred-info">
+                  <span className="demo-cred-email">{acct.email}</span>
+                  <span className="demo-cred-pass">{acct.password}</span>
+                </span>
+                <span className="demo-cred-go" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
